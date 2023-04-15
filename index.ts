@@ -2,19 +2,28 @@ import { Map } from "./map-types";
 import * as fs from 'fs';
 import * as yargs from 'yargs';
 import * as flat from 'flat';
+import * as util from "util";
+
+const alasql = require("alasql");
+
+const display = (x: unknown) => console.log(util.inspect(x, { depth: 6, colors: true, maxArrayLength: null }))
+
 
 // Read the JSON file and parse it into an object
 const readJsonFile = (filePath) => {
   try {
     const jsonString = fs.readFileSync(filePath, 'utf-8');
-    return JSON.parse(jsonString);
+    const map = JSON.parse(jsonString) as Map
+
+    return map
+
   } catch (error) {
     console.error(`Error reading the JSON file: ${error}`);
     process.exit(1);
   }
 }
 
-const pathQuery = (pathParts: string[], data: Map, properties: string[]) => {
+const pathQuery = (pathParts: string[], data: Map, properties: string[]):unknown => {
   let result: {}[] | {} = data;
 
   for (const part of pathParts) {
@@ -48,7 +57,7 @@ const pathQuery = (pathParts: string[], data: Map, properties: string[]) => {
     result = filteredResult;
   }
 
-  console.log(result);
+  return result;
 }
 
 const termQuery = (argvTerm: string, data: Map) => {
@@ -57,7 +66,7 @@ const termQuery = (argvTerm: string, data: Map) => {
   const matches = searchKeysAndValues(data, term);
 
   if (Object.keys(matches).length === 0) {
-    console.log('No matches found.');
+    display('No matches found.');
   } else {
     for (const [path, value] of Object.entries(matches)) {
       console.log(`${path}: ${value}`);
@@ -90,19 +99,36 @@ const searchKeysAndValues = (data, query) => {
   return matches;
 
 }
-// Find all paths with values that match the query
-const search = (data, query) => {
-  const flattened = flat.flatten(data);
-  const matches = {};
-
-  for (const [path, value] of Object.entries(flattened)) {
-    if (isMatch(value, query)) {
-      matches[path] = value;
-    }
+const generateCreateTableStatement = (tableName: string, dataArray: any[]): string => {
+  dataArray = dataArray.filter(elem => typeof elem !== "number" && Object.keys(elem).length)
+  if (!dataArray || dataArray.length === 0) {
+    throw new Error('Array is empty or not provided');
   }
 
-  return matches;
-}
+  const reservedWords = ["group"]
+
+  tableName = reservedWords.includes(tableName) ? `\`${tableName}\`` : tableName
+
+  const firstObject = dataArray[1];
+  const columns = Object.keys(firstObject)
+    .map((key) => {
+      const value = firstObject[key];
+      const columName = reservedWords.includes(key) ? `\`${key}\`` : key
+      const columnType = typeof value === 'number'
+        ? Number.isInteger(value) ? 'INT' : 'FLOAT'
+        : typeof value === 'string'
+          ? 'STRING'
+          : typeof value === 'boolean'
+            ? 'BOOLEAN'
+            : 'JSON';
+
+      return `${columName} ${columnType}`;
+    })
+    .join(', ');
+
+  return `CREATE TABLE ${tableName} (${columns})`;
+};
+
 // Define the CLI commands and options
 yargs
   .command({
@@ -129,10 +155,15 @@ yargs
         demandOption: false,
         type: 'string',
       },
+      sql: {
+        describe: 'SQL query string to perform on JSON data',
+        demandOption: false,
+        type: 'string',
+      },
     },
     handler(argv) {
-      if (!argv.path && !argv.term) {
-        console.error('You must provide either the --path or --term option.');
+      if (!argv.path && !argv.term && !argv.sql) {
+        console.error('You must provide at least one of the following options: --path, --term, or --sql.');
         process.exit(1);
       }
 
@@ -140,10 +171,59 @@ yargs
       const pathParts = argv.path?.split('.');
       const properties: string[] = argv.properties?.split(',') ?? [];
 
-      if (pathParts && pathParts.length) pathQuery(pathParts, data, properties)
-      else termQuery(argv.term, data)
+      if (argv.sql) {
+        const db = new alasql.Database()
+        alasql.fn.listTables = () => {
+          const tableNames = Object.keys(db.tables);
+          return tableNames;
+        };
+
+        alasql.fn.pathValue = (path: string) => pathQuery(path.split("."), data, [])
+        
+        const biomes = data.biomes.i.map((i) => {
+          return {
+            i,
+            name: data.biomes.name[i],
+            color: data.biomes.color[i],
+            // biomesMatrix: data.biomes.biomesMartix[i],
+            habitability: data.biomes.habitability[i],
+            icons: data.biomes.icons[i],
+            cost: data.biomes.cost[i],
+          };
+        });
+
+        const markers = data.cells.markers.map(marker => ({ ...marker, note: data.notes.find(note => note.id === `marker${marker.i}`) }))
+        const states = data.cells.states.map( state => ({
+          ...state,
+          military: state.military?.map( regiment => ({...regiment, note:data.notes.find( note => note.id===`regiment${state.i}-${regiment.i}`)}))
+        }))
+
+
+        const dataObj:{[key:string]:any[]} = {
+          ...data.cells,
+          biomes,
+          markers,
+          notes:data.notes,
+          states
+        }
+
+        Object.entries(dataObj).forEach(([key, value]) => {
+          const createTable = generateCreateTableStatement(key, value.filter(o => typeof o !== "number"))
+          db.exec(createTable);
+          value = value.filter(elem => typeof elem !== "number" && Object.keys(elem).length)
+          db.tables[key].data = value
+        })
+        const result = db.exec(argv.sql);
+        display(result);
+      } else if (pathParts && pathParts.length) {
+        const query = pathQuery(pathParts, data, properties);
+        display(query)
+      } else {
+        termQuery(argv.term, data);
+      }
     }
   })
   .demandCommand(1, '')
   .help()
   .parse();
+
