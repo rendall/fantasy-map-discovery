@@ -67,7 +67,7 @@ The "path" option is used to retrieve the value of a specific JSON path within t
 node index.js search --path [json_path]
 ```
 
-Replace `[json_path]` with the desired JSON path to the object you want to extract.
+Replace `[json_path]` with the desired JSON path to the object you want to extract. See [Examples](#examples) and [Details](#details) below for more about how to write a *path*.
 
 ### --term
 
