@@ -321,12 +321,12 @@ Follow these steps to get the application up and running on your local machine:
    npm install
 ```
 
-5. After the dependencies are installed, you can run the application using the following command:
+5. After the dependencies are installed, make sure it works using the following command:
 
 ```
-   node app.js <options>
+   node index.js search
 ```
 
-Replace `<options>` with the desired command-line options, as explained in the [Usage](#usage) section.
+If you see something like `Query specifc information in the JSON file` you are good to go. 
 
 That's it! You should now be able to use the application on your local machine.
