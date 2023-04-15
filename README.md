@@ -51,11 +51,13 @@ This README covers what these options mean. Be sure to check out the [Examples](
 
 ### --file
 
-File is required, and is a relative path to your map.
+File is required, and is a relative path to the json file you downloaded in the first step.
 
 ```
 node index.js search --file=Chuely.json --term="culture"
 ```
+
+If the app does not find it, you will see an error like `Error reading the JSON file: Error: ENOENT: no such file or directory`
 
 ### --path
 
