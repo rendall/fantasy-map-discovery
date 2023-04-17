@@ -1,8 +1,9 @@
-import { Map } from "./map-types";
+import { FantasyMap } from "./lib/map-types";
 import * as fs from 'fs';
 import * as yargs from 'yargs';
 import * as flat from 'flat';
 import * as util from "util";
+import { findRouteAStar } from "./lib/astar";
 
 const alasql = require("alasql");
 
@@ -10,10 +11,10 @@ const display = (x: unknown) => console.log(util.inspect(x, { depth: 6, colors: 
 
 
 // Read the JSON file and parse it into an object
-const readJsonFile = (filePath) => {
+const readJsonFile = (filePath:string) => {
   try {
     const jsonString = fs.readFileSync(filePath, 'utf-8');
-    const map = JSON.parse(jsonString) as Map
+    const map = JSON.parse(jsonString) as FantasyMap
 
     return map
 
@@ -23,22 +24,33 @@ const readJsonFile = (filePath) => {
   }
 }
 
-const pathQuery = (pathParts: string[], data: Map, properties: string[]):unknown => {
-  let result: {}[] | {} = data;
+interface QueryResult {
+  [key: string]: any;
+}
+
+interface QueryData {
+  [key: string]: any;
+}
+
+const pathQuery = (
+  pathParts: string[],
+  data: FantasyMap,
+  properties: string[]
+): QueryResult | QueryResult[] => {
+  let result: QueryResult | QueryResult[] = data;
 
   for (const part of pathParts) {
-    if (result[part] === undefined) {
+    if ((result as QueryData)[part] === undefined) {
       console.error(`Path '${pathParts.join(".")}' does not exist in the JSON object.`);
       process.exit(1);
     }
-    result = result[part];
+    result = (result as QueryData)[part];
   }
-
 
   if (Array.isArray(result)) {
     if (properties.length > 0) {
       result = result.map(item => {
-        const filteredItem = {};
+        const filteredItem: QueryResult = {};
         for (const prop of properties) {
           if (item.hasOwnProperty(prop)) {
             filteredItem[prop] = item[prop];
@@ -48,19 +60,20 @@ const pathQuery = (pathParts: string[], data: Map, properties: string[]):unknown
       });
     }
   } else if (properties.length) {
-    const filteredResult = {};
+    const filteredResult: QueryResult = {};
     for (const prop of properties) {
-      if (result.hasOwnProperty(prop)) {
-        filteredResult[prop] = result[prop];
+      if ((result as QueryResult).hasOwnProperty(prop)) {
+        filteredResult[prop] = (result as QueryResult)[prop];
       }
     }
     result = filteredResult;
   }
 
   return result;
-}
+};
 
-const termQuery = (argvTerm: string, data: Map) => {
+
+const termQuery = (argvTerm: string, data: FantasyMap) => {
   const isRegex = argvTerm.startsWith('/') && argvTerm.endsWith('/')
   const term = isRegex ? new RegExp(argvTerm.slice(1, -1)) : argvTerm;
   const matches = searchKeysAndValues(data, term);
@@ -75,17 +88,17 @@ const termQuery = (argvTerm: string, data: Map) => {
 
 }
 
-const isMatch = (value, query) => {
-  if (query instanceof RegExp) {
+const isMatch = (value: unknown, query: string | RegExp) => {
+  if (query instanceof RegExp && typeof value === "string") {
     return query.test(value);
   }
   return value === query;
 }
 
 // Find all paths with keys or values that match the query
-const searchKeysAndValues = (data, query) => {
-  const flattened = flat.flatten(data);
-  const matches = {};
+const searchKeysAndValues = (data:FantasyMap, query: string | RegExp) => {
+  const flattened: { [key: string]: unknown } = flat.flatten(data);
+  const matches: { [key: string]: unknown } = {};
 
   for (const [path, value] of Object.entries(flattened)) {
     if (isMatch(value, query)) {
@@ -167,7 +180,7 @@ yargs
         process.exit(1);
       }
 
-      const data = readJsonFile(argv.file) as Map;
+      const data = readJsonFile(argv.file) as FantasyMap;
       const pathParts = argv.path?.split('.');
       const properties: string[] = argv.properties?.split(',') ?? [];
 
@@ -222,8 +235,53 @@ yargs
         termQuery(argv.term, data);
       }
     }
+  })  
+  .command({
+    command: 'route',
+    describe: 'Find the shortest route between two locations in the map',
+    builder: {
+      file: {
+        describe: 'Path to the JSON file',
+        demandOption: true,
+        type: 'string',
+      },
+      locations: {
+        describe: 'Comma-separated list of start and end cell indices',
+        demandOption: true,
+        type: 'string',
+      },
+    },
+    handler(argv) {
+      const data = readJsonFile(argv.file) as FantasyMap;
+      const cells = data.cells.cells
+      const [startIdx, endIdx]: [number, number] = argv.locations.split(',').map((idx:string) => parseInt(idx.trim(), 10));
+
+      if (isNaN(startIdx) || isNaN(endIdx)) {
+        console.error('Invalid location indices provided.');
+        process.exit(1);
+      }
+
+      const startCell = cells.find((cell) => cell.i === startIdx);
+      const endCell = cells.find((cell) => cell.i === endIdx);
+
+      if (!startCell || !endCell) {
+        console.error('One or both of the provided cell indices are not found in the map data.');
+        process.exit(1);
+      }
+
+      const showBurg = (burgId:number) => burgId === 0? "" : `burg: ${data.cells.burgs[burgId].name},`
+
+      const heightExponent = parseInt(data.settings.heightExponent)
+      const route = findRouteAStar(startCell, endCell, cells, data.biomes.cost, heightExponent);
+
+      if (route) {
+        console.log('Route:');
+        route.forEach((cell) => console.log(`Cell i: ${cell.i}, ${showBurg(cell.burg)} biome: ${data.biomes.name[cell.biome]}, position: (${cell.p[0]}, ${cell.p[1]})`));
+      } else {
+        console.log('No route found between the provided locations.');
+      }
+    },
   })
   .demandCommand(1, '')
   .help()
   .parse();
-

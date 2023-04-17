@@ -1,4 +1,4 @@
-export interface Map {
+export interface FantasyMap {
     info:      Info;
     settings:  Settings;
     coords:    Coords;

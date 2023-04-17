@@ -1,4 +1,4 @@
-import { Map } from "./map-types";
+import { FantasyMap } from "./lib/map-types";
 // Converts JSON strings to/from your types
 // and asserts the results of JSON.parse at runtime
 // To parse this data:
@@ -10,11 +10,11 @@ import { Map } from "./map-types";
 // These functions will throw an error if the JSON doesn't
 // match the expected interface, even if the JSON is valid.
 export class Convert {
-    public static toMap(json: string): Map {
+    public static toMap(json: string): FantasyMap {
         return cast(JSON.parse(json), r("Map"));
     }
 
-    public static mapToJson(value: Map): string {
+    public static mapToJson(value: FantasyMap): string {
         return JSON.stringify(uncast(value, r("Map")), null, 2);
     }
 }
