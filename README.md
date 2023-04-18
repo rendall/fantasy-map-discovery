@@ -11,10 +11,11 @@ First, acquire a map!
 1. Visit <https://azgaar.github.io/Fantasy-Map-Generator/>
 1. Generate a map that you like.
 1. Click the arrow in the upper left corner of the site.
-1. In the popup menu, find and click the *Export* button along the bottom.
-1. Then choose **full** *Export to JSON* and save it to your computer.
-    * The directory should be convenient to this app. Consider putting it right in this project's directory.
-    * Consider renaming it to something short.
+1. In the popup menu, find and click the _Export_ button along the bottom.
+1. Then choose **full** _Export to JSON_ and save it to your computer.
+   - The directory should be convenient to this app. Consider putting it right in this project's directory.
+   - Consider renaming it to something short.
+1. I recommend you *also* _Save_ your map (with the Save button), so that you can load it and view it in the website.
 
 This app uses that JSON.
 
@@ -22,7 +23,7 @@ This app uses that JSON.
 
 These instructions assume you are familiar with Node.js, command line interfaces and you know how to install this repo. If not, please check [Installation](#installation) below.
 
-There is a [search](#search-command) command and a [route](#route-command) command. 
+There is a [search](#search-command) command and a [route](#route-command) command.
 
 ### search command
 
@@ -71,7 +72,7 @@ The "path" option is used to retrieve the value of a specific JSON path within t
 node src/index.js search --path [json_path]
 ```
 
-Replace `[json_path]` with the desired JSON path to the object you want to extract. See [Examples](#examples) and [Details](#details) below for more about how to write a *path*.
+Replace `[json_path]` with the desired JSON path to the object you want to extract. See [Examples](#examples) and [Details](#details) below for more about how to write a _path_.
 
 ### --term
 
@@ -119,10 +120,13 @@ node src/index.js search --file=Chuely.json --sql="SELECT * FROM cells WHERE roa
 ```
 
 You can list all of the tables available to query by using:
+
 ```
 node src/index.js search --file=Chuely.json --sql="SELECT VALUE listTables()"
 ```
+
 and that should return:
+
 ```JSON
 [
   'cells',     'features',
@@ -135,6 +139,7 @@ and that should return:
 ```
 
 You can also use paths in your SQL query by using the special `pathValue` function:
+
 ```
 node src/index.js search --file=Chuely.json --sql="SELECT VALUE pathValue('settings.mapName')"
 
@@ -162,11 +167,13 @@ node src/index.js search --file=Chuely.json --sql="SELECT name, CAST(population 
 ```
 
 List the states and their capitals:
+
 ```
 node src/index.js search --file=Chuely.json --sql="SELECT states.name AS state_name, burgs.name AS capital_name FROM states JOIN burgs ON states.capital = burgs.i"
 ```
 
 List the burgs and their biomes:
+
 ```
 node src/index.js search --file=Chuely.json --sql="SELECT burgs.name AS burg_name, biomes.name AS biome FROM burgs JOIN cells ON burgs.cell = cells.i JOIN biomes ON cells.biome = biomes.i"
 ```
@@ -174,13 +181,15 @@ node src/index.js search --file=Chuely.json --sql="SELECT burgs.name AS burg_nam
 Retrieve the value of a specific JSON path:
 
 ```
-node src/index.js search --file Chuely.json --path "cells.cells.733.biome" 
+node src/index.js search --file Chuely.json --path "cells.cells.733.biome"
 ```
 
 List the populations of all the burgs - using `settings.populationRate` as the mutliplier:
+
 ```
 node src/index.js search --file=Chuely.json --sql="SELECT name, CAST(population * pathValue('settings.populationRate') AS INTEGER) AS population FROM burgs"
 ```
+
 ### Details
 
 #### path
@@ -255,7 +264,7 @@ node src/index.js search --file=Chuely.json --path="cells.rivers"
 
 This app uses the [AlaSQL](https://github.com/AlaSQL/alasql#readme) library to parse your SQL queries.
 
-SQL is a programming language designed for managing and manipulating relational databases that allows you to retrieve data from one or more *tables* using the SELECT statement and join them together based on specified conditions to create a combined result set. If you need more information, I can recommend [Khan Academy](https://www.khanacademy.org/computing/computer-programming/sql)
+SQL is a programming language designed for managing and manipulating relational databases that allows you to retrieve data from one or more _tables_ using the SELECT statement and join them together based on specified conditions to create a combined result set. If you need more information, I can recommend [Khan Academy](https://www.khanacademy.org/computing/computer-programming/sql)
 
 There are two custom functions you can use in your SQL query:
 
@@ -292,7 +301,7 @@ Replace `settings.mapName` with the desired JSON path, using dots to separate th
 
 `--term` uses a string or regular expressions (regex) to match your search. I've had the best luck using regex `/whatever/` than strings `"whatever"`. If you'd like to learn more about regular expressions, <https://regexr.com/> seems pretty okay.
 
-Using `--term` returns the value and the path to that value.  e.g.
+Using `--term` returns the value and the path to that value. e.g.
 
 ```
 $ node src/index.js search --file=Chuely.json --term=/military/
@@ -313,46 +322,53 @@ $ node src/index.js search --file=Chuely.json --path settings.options.military.4
 
 ### route command
 
-Pathfinding. Find the shortest route a traveller can take going from one location to another.
+Pathfinding. Use the `route` command to find the shortest route a traveller can take from one location to another.
 
-`node src/index.js route --help`
+`node src/index.js route --help` gives these instructions
+
 ```
 index.js route
 
-Find the shortest route between two locations in the map
+Find the shortest route between locations in the map
 
 Options:
-  --version    Show version number                                     [boolean]
-  --help       Show help                                               [boolean]
-  --file       Path to the JSON file                         [string] [required]
-  --locations  Comma-separated list of start and end cell indices
+  --version    Show version number
+  --help       Show help
+  --file       Path to the JSON file
+  --locations  Comma-separated list of cell indices or location names (start, intermediate1, intermediate2, ..., end)
 ```
 
+#### examples
+
+Type the `--locations` separated by commas.
+
+`node src/index.js route --locations="Skalt'hanek,Nanarras,Sargush,Rralerjass" --file=RAW/Nidyia.json`
+
+The first location is the start and the others are visited in turn:
+
+```
+Cell i: 79, burg: Skalt'hanek, biome: Temperate rainforest, position: (590.57, 217.21)
+Cell i: 144,  biome: Temperate rainforest, position: (598.88, 223.51)
+Cell i: 84, burg: Nanarras, biome: Temperate rainforest, position: (616.5, 224.7)
+Cell i: 81, burg: Sargush, biome: Temperate rainforest, position: (626.31, 216.97)
+Cell i: 38,  biome: Temperate rainforest, position: (622.5, 206.3)
+Cell i: 37, burg: Rralerjass, biome: Temperate rainforest, position: (618.73, 195.54)
+```
+
+You can type the name in lowercase and without spaces or other marks, if that's easier:
+
+`node src/index.js route --locations="skalthanek,nanarras,sargush,rralerjass" --file=RAW/Nidyia.json`
+
+You can also use the cell ids for unnamed locations without a burg, like so:
+
 `node src/index.js route --file Nidyia.json --locations 3679,4186`
-```
-Route:
-Cell i: 3679, burg: Kasyaman, biome: Grassland, position: (1771.32, 810.51)
-Cell i: 3680,  biome: Grassland, position: (1789.08, 820.11)
-Cell i: 3807,  biome: Grassland, position: (1808.46, 838.24)
-Cell i: 3926,  biome: Temperate deciduous forest, position: (1825.71, 851.33)
-Cell i: 3928,  biome: Temperate deciduous forest, position: (1846.1, 856.3)
-Cell i: 4051, burg: Charemerma, biome: Temperate deciduous forest, position: (1856.27, 865.3)
-Cell i: 3929,  biome: Marine, position: (1868.68, 851.48)
-Cell i: 3930,  biome: Marine, position: (1878.66, 856.04)
-Cell i: 3931,  biome: Marine, position: (1891.5, 852.2)
-Cell i: 3934,  biome: Marine, position: (1907.6, 858)
-Cell i: 3935,  biome: Marine, position: (1918.02, 859.28)
-Cell i: 3936,  biome: Marine, position: (1924.9, 868.5)
-Cell i: 4061,  biome: Marine, position: (1931.72, 877.76)
-Cell i: 4177,  biome: Marine, position: (1930.25, 884.45)
-Cell i: 4178,  biome: Marine, position: (1932.2, 897.4)
-Cell i: 4179, burg: Hilbishe, biome: Temperate deciduous forest, position: (1948.62, 896.63)
-Cell i: 4181, burg: Kare, biome: Temperate deciduous forest, position: (1964.6, 893.8)
-Cell i: 4298,  biome: Temperate deciduous forest, position: (1973.15, 915.24)
-Cell i: 4299, burg: Tolu, biome: Temperate deciduous forest, position: (1989.91, 909.55)
-Cell i: 4185,  biome: Temperate rainforest, position: (2000.28, 894.43)
-Cell i: 4186, burg: Ceyhan, biome: Temperate rainforest, position: (2014.1, 891.6)
-```
+
+To find the correct cell id, open the _Cell Details_ window on the website,
+hover your cursor over the part of the map for which you want the cell id and
+observe the first number, labeled *Cell* (e.g. `Cell: 3284`). Use that number
+in the `--locations` option.
+
+To open the _Cell Details_ window open the menu, then click _Tools_ then _Click to overview: Cells_.
 
 ## Installation
 
@@ -376,6 +392,6 @@ Follow these steps to get the application up and running on your local machine:
    node index.js search
 ```
 
-If you see something like `Query specifc information in the JSON file` you are good to go. 
+If you see something like `Query specifc information in the JSON file` you are good to go.
 
 That's it! You should now be able to use the application on your local machine.

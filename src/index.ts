@@ -1,4 +1,4 @@
-import { FantasyMap } from "./lib/map-types";
+import { Cells, FantasyMap } from "./lib/map-types";
 import * as fs from 'fs';
 import * as yargs from 'yargs';
 import * as flat from 'flat';
@@ -9,9 +9,16 @@ const alasql = require("alasql");
 
 const display = (x: unknown) => console.log(util.inspect(x, { depth: 6, colors: true, maxArrayLength: null }))
 
+const getCellFromName = (locationName: string, { burgs, cells }: Cells) => {
+  const normalize = (s: string = "") => s.toLowerCase().replace(/[\s\W]/g, "")
+  const burg = burgs.find(burg => normalize(burg.name) === normalize(locationName))
+  if (burg) return cells.find(cell => cell.i === burg.cell)
+  console.error(`Location ${locationName} not found. (normalized to ${normalize(locationName)})`)
+}
+
 
 // Read the JSON file and parse it into an object
-const readJsonFile = (filePath:string) => {
+const readJsonFile = (filePath: string) => {
   try {
     const jsonString = fs.readFileSync(filePath, 'utf-8');
     const map = JSON.parse(jsonString) as FantasyMap
@@ -96,7 +103,7 @@ const isMatch = (value: unknown, query: string | RegExp) => {
 }
 
 // Find all paths with keys or values that match the query
-const searchKeysAndValues = (data:FantasyMap, query: string | RegExp) => {
+const searchKeysAndValues = (data: FantasyMap, query: string | RegExp) => {
   const flattened: { [key: string]: unknown } = flat.flatten(data);
   const matches: { [key: string]: unknown } = {};
 
@@ -192,7 +199,7 @@ yargs
         };
 
         alasql.fn.pathValue = (path: string) => pathQuery(path.split("."), data, [])
-        
+
         const biomes = data.biomes.i.map((i) => {
           return {
             i,
@@ -206,17 +213,17 @@ yargs
         });
 
         const markers = data.cells.markers.map(marker => ({ ...marker, note: data.notes.find(note => note.id === `marker${marker.i}`) }))
-        const states = data.cells.states.map( state => ({
+        const states = data.cells.states.map(state => ({
           ...state,
-          military: state.military?.map( regiment => ({...regiment, note:data.notes.find( note => note.id===`regiment${state.i}-${regiment.i}`)}))
+          military: state.military?.map(regiment => ({ ...regiment, note: data.notes.find(note => note.id === `regiment${state.i}-${regiment.i}`) }))
         }))
 
 
-        const dataObj:{[key:string]:any[]} = {
+        const dataObj: { [key: string]: any[] } = {
           ...data.cells,
           biomes,
           markers,
-          notes:data.notes,
+          notes: data.notes,
           states
         }
 
@@ -235,10 +242,10 @@ yargs
         termQuery(argv.term, data);
       }
     }
-  })  
+  })
   .command({
     command: 'route',
-    describe: 'Find the shortest route between two locations in the map',
+    describe: 'Find the shortest route between locations in the map',
     builder: {
       file: {
         describe: 'Path to the JSON file',
@@ -246,37 +253,58 @@ yargs
         type: 'string',
       },
       locations: {
-        describe: 'Comma-separated list of start and end cell indices',
+        describe: 'Comma-separated list of cell indices or location names (start, intermediate1, intermediate2, ..., end)',
         demandOption: true,
         type: 'string',
       },
     },
     handler(argv) {
       const data = readJsonFile(argv.file) as FantasyMap;
-      const cells = data.cells.cells
-      const [startIdx, endIdx]: [number, number] = argv.locations.split(',').map((idx:string) => parseInt(idx.trim(), 10));
+      const cells = data.cells.cells;
+      const locations = argv.locations.split(',').map((location: string) => location.trim());
 
-      if (isNaN(startIdx) || isNaN(endIdx)) {
-        console.error('Invalid location indices provided.');
-        process.exit(1);
-      }
+      const locationIds = locations.map((location:string) => {
+        const locationId = parseInt(location, 10);
+        if (isNaN(locationId)) {
+          const cell = getCellFromName(location, data.cells);
+          if (cell) {
+            return cell.i;
+          } else {
+            console.error(`Location ${location} not found.`);
+            process.exit(1);
+          }
+        }
+        return locationId;
+      });
 
-      const startCell = cells.find((cell) => cell.i === startIdx);
-      const endCell = cells.find((cell) => cell.i === endIdx);
+      const routes = [];
+      for (let i = 0; i < locationIds.length - 1; i++) {
+        const startCell = cells.find((cell) => cell.i === locationIds[i]);
+        const endCell = cells.find((cell) => cell.i === locationIds[i + 1]);
 
-      if (!startCell || !endCell) {
-        console.error('One or both of the provided cell indices are not found in the map data.');
-        process.exit(1);
+        if (!startCell || !endCell) {
+          console.error('One or both of the provided cell indices are not found in the map data.');
+          process.exit(1);
+        }
+
+        const heightExponent = parseInt(data.settings.heightExponent);
+        const route = findRouteAStar(startCell, endCell, cells, data.biomes.cost, heightExponent);
+        if (route) {
+          routes.push(route.slice(0, -1)); // Remove the last element to avoid duplicating the intermediate locations
+        } else {
+          console.log(`No route found between locations ${locations[i]} and ${locations[i + 1]}.`);
+          process.exit(1);
+        }
       }
 
       const showBurg = (burgId:number) => burgId === 0? "" : `burg: ${data.cells.burgs[burgId].name},`
+      // Add the last location to the final route
+      const finalRoute = routes.flat().concat(cells.find((cell) => cell.i === locationIds[locationIds.length - 1])!);
 
-      const heightExponent = parseInt(data.settings.heightExponent)
-      const route = findRouteAStar(startCell, endCell, cells, data.biomes.cost, heightExponent);
-
-      if (route) {
+      // Display the final route
+      if (finalRoute.length > 0) {
         console.log('Route:');
-        route.forEach((cell) => console.log(`Cell i: ${cell.i}, ${showBurg(cell.burg)} biome: ${data.biomes.name[cell.biome]}, position: (${cell.p[0]}, ${cell.p[1]})`));
+        finalRoute.forEach((cell) => console.log(`Cell i: ${cell.i}, ${showBurg(cell.burg)} biome: ${data.biomes.name[cell.biome]}, position: (${cell.p[0]}, ${cell.p[1]})`));
       } else {
         console.log('No route found between the provided locations.');
       }
