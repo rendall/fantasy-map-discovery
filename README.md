@@ -15,7 +15,7 @@ First, acquire a map!
 1. Then choose **full** _Export to JSON_ and save it to your computer.
    - The directory should be convenient to this app. Consider putting it right in this project's directory.
    - Consider renaming it to something short.
-1. I recommend you *also* _Save_ your map (with the Save button), so that you can load it and view it in the website.
+1. After saving, you can view the map on the website by finding the `info.seed` value (e.g. `"seed": "126920625"`) and then putting that number value in the *Menu => Options => Map seed* field
 
 This app uses that JSON.
 
@@ -340,6 +340,8 @@ Options:
 
 #### examples
 
+If you want to follow along the examples, Nidyia has seed `126920625` and Chuely has seed `570163886`.
+
 Type the `--locations` separated by commas.
 
 `node src/index.js route --locations="Skalt'hanek,Nanarras,Sargush,Rralerjass" --file=RAW/Nidyia.json`
@@ -347,12 +349,12 @@ Type the `--locations` separated by commas.
 The first location is the start and the others are visited in turn:
 
 ```
-Cell i: 79, burg: Skalt'hanek, biome: Temperate rainforest, position: (590.57, 217.21)
-Cell i: 144,  biome: Temperate rainforest, position: (598.88, 223.51)
-Cell i: 84, burg: Nanarras, biome: Temperate rainforest, position: (616.5, 224.7)
-Cell i: 81, burg: Sargush, biome: Temperate rainforest, position: (626.31, 216.97)
-Cell i: 38,  biome: Temperate rainforest, position: (622.5, 206.3)
-Cell i: 37, burg: Rralerjass, biome: Temperate rainforest, position: (618.73, 195.54)
+Cell i: 79, distance: 0 mi, burg: Skalt'hanek, biome: Temperate rainforest, position: (590.57, 217.21)
+Cell i: 144, distance: 41.7 mi,  biome: Temperate rainforest, position: (598.88, 223.51)
+Cell i: 84, distance: 112.4 mi, burg: Nanarras, biome: Temperate rainforest, position: (616.5, 224.7)
+Cell i: 81, distance: 162.3 mi, burg: Sargush, biome: Temperate rainforest, position: (626.31, 216.97)
+Cell i: 38, distance: 207.6 mi,  biome: Temperate rainforest, position: (622.5, 206.3)
+Cell i: 37, distance: 253.2 mi, burg: Rralerjass, biome: Temperate rainforest, position: (618.73, 195.54)
 ```
 
 You can type the name in lowercase and without spaces or other marks, if that's easier:

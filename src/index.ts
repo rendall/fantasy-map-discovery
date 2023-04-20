@@ -1,4 +1,4 @@
-import { Cells, FantasyMap } from "./lib/map-types";
+import { Cell, Cells, FantasyMap } from "./lib/map-types";
 import * as fs from 'fs';
 import * as yargs from 'yargs';
 import * as flat from 'flat';
@@ -301,10 +301,20 @@ yargs
       // Add the last location to the final route
       const finalRoute = routes.flat().concat(cells.find((cell) => cell.i === locationIds[locationIds.length - 1])!);
 
+      const cellDistance = (a: Cell, b: Cell) => Math.sqrt((a.p[0] - b.p[0]) ** 2 + (a.p[1] - b.p[1]) ** 2)
+      let distance = 0
+
+      const addDistance = (i:number, route:Cell[]) => {
+        if (i===0) return 0
+        distance = distance + cellDistance(route[i], route[i - 1])
+        const scaledDistance = distance * parseFloat(data.settings.distanceScale)
+        return parseFloat(scaledDistance.toFixed(1))
+      }
+
       // Display the final route
       if (finalRoute.length > 0) {
         console.log('Route:');
-        finalRoute.forEach((cell) => console.log(`Cell i: ${cell.i}, ${showBurg(cell.burg)} biome: ${data.biomes.name[cell.biome]}, position: (${cell.p[0]}, ${cell.p[1]})`));
+        finalRoute.forEach((cell, i, route) => console.log(`Cell i: ${cell.i}, distance: ${addDistance(i, route)} ${data.settings.distanceUnit}, ${showBurg(cell.burg)} biome: ${data.biomes.name[cell.biome]}, position: (${cell.p[0]}, ${cell.p[1]})`));
       } else {
         console.log('No route found between the provided locations.');
       }
