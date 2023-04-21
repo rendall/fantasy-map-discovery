@@ -32,10 +32,13 @@ const alasql = require("alasql");
 const display = (x) => console.log(util.inspect(x, { depth: 6, colors: true, maxArrayLength: null }));
 const getCellFromName = (locationName, { burgs, cells }) => {
     const normalize = (s = "") => s.toLowerCase().replace(/[\s\W]/g, "");
-    const burg = burgs.find(burg => normalize(burg.name) === normalize(locationName));
-    if (burg)
-        return cells.find(cell => cell.i === burg.cell);
-    console.error(`Location ${locationName} not found. (normalized to ${normalize(locationName)})`);
+    const namedBurgs = burgs.filter(burg => normalize(burg.name) === normalize(locationName));
+    if (namedBurgs.length > 1)
+        console.warn(`Location ${locationName} found at cells ${namedBurgs.map(burg => burg.cell).join(', ')}`);
+    if (namedBurgs.length > 0)
+        return cells.find(cell => cell.i === namedBurgs[0].cell);
+    if (!namedBurgs.length)
+        console.error(`Location ${locationName} not found. (normalized to ${normalize(locationName)})`);
 };
 // Read the JSON file and parse it into an object
 const readJsonFile = (filePath) => {

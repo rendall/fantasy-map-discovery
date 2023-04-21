@@ -68,7 +68,8 @@ export const findRouteAStar = (start: Cell, end: Cell, cells: Cell[], biomes: nu
 
     openSet.delete(current);
     current.c.forEach((neighborIndex) => {
-      const neighbor = cells[neighborIndex];
+      const neighbor = cells.find(cell => cell.i === neighborIndex);
+      if (!neighbor) throw new Error(`Bad data. cell ${neighborIndex} not found ( from cell ${current.i} neighbors ${current.c} )`)
       // Only enter the Marine biome from towns with water routes
       if (neighbor.biome === MARINE_BIOME_INDEX && current.biome !== MARINE_BIOME_INDEX) {
         if (current.burg === 0 || neighbor.road !== 1 || current.harbor === 0) {
