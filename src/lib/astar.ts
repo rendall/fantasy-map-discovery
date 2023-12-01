@@ -1,12 +1,12 @@
-import { Cell } from "./map-types";
+import { PackCell } from "./map-types";
 const MARINE_BIOME_INDEX = 0
-const heuristic = (cellA:Cell, cellB:Cell) => {
+const heuristic = (cellA:PackCell, cellB:PackCell) => {
   const [x1, y1] = cellA.p;
   const [x2, y2] = cellB.p;
   return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
 };
 
-const reconstructPath = (cameFrom: Map<number, Cell>, current: Cell) => {
+const reconstructPath = (cameFrom: Map<number, PackCell>, current: PackCell) => {
   const path = [current];
   while (cameFrom.has(current.i)) {
     current = cameFrom.get(current.i)!
@@ -43,7 +43,7 @@ const slopePenalty = (currentHeight: number, neighborHeight: number, heightExpon
  * @param distanceScalingFactor - A scaling factor to control the penalty increase as the cell gets closer to the destination. Default is 1.
  * @returns The height penalty for the current cell based on its distance to the destination and the difference in heights between the current cell and the destination.
  */
-const heightPenalty = (current: Cell, end: Cell, distanceScalingFactor: number = 1) => {
+const heightPenalty = (current: PackCell, end: PackCell, distanceScalingFactor: number = 1) => {
   const heightDifference = Math.abs(end.h - current.h);
   const distanceToDestination = heuristic(current, end);
   const normalizedDistance = 1 - (distanceToDestination / (distanceToDestination + distanceScalingFactor));
@@ -51,9 +51,9 @@ const heightPenalty = (current: Cell, end: Cell, distanceScalingFactor: number =
   return heightDifference * normalizedDistance;
 };
 
-export const findRouteAStar = (start: Cell, end: Cell, cells: Cell[], biomes: number[], heightExponent:number = 2) => {
+export const findRouteAStar = (start: PackCell, end: PackCell, cells: PackCell[], biomes: number[], heightExponent:number = 2) => {
   const openSet = new Set([start]);
-  const cameFrom = new Map<number, Cell>();
+  const cameFrom = new Map<number, PackCell>();
   const gScore = new Map(cells.map((cell) => [cell.i, Infinity]));
   gScore.set(start.i, 0);
   const fScore = new Map(cells.map((cell) => [cell.i, Infinity]));

@@ -28,6 +28,7 @@ const yargs = __importStar(require("yargs"));
 const flat = __importStar(require("flat"));
 const util = __importStar(require("util"));
 const astar_1 = require("./lib/astar");
+const VERSION = '1.96.00';
 const alasql = require("alasql");
 const display = (x) => console.log(util.inspect(x, { depth: 6, colors: true, maxArrayLength: null }));
 const getCellFromName = (locationName, { burgs, cells }) => {
@@ -45,6 +46,9 @@ const readJsonFile = (filePath) => {
     try {
         const jsonString = fs.readFileSync(filePath, 'utf-8');
         const map = JSON.parse(jsonString);
+        if (map.info.version !== VERSION) {
+            console.warn(`Version mismatch: expected ${VERSION} but got ${map.info.version}. This may cause errors.`);
+        }
         return map;
     }
     catch (error) {
@@ -175,14 +179,13 @@ yargs
         },
     },
     handler(argv) {
-        var _a, _b, _c;
         if (!argv.path && !argv.term && !argv.sql) {
             console.error('You must provide at least one of the following options: --path, --term, or --sql.');
             process.exit(1);
         }
         const data = readJsonFile(argv.file);
-        const pathParts = (_a = argv.path) === null || _a === void 0 ? void 0 : _a.split('.');
-        const properties = (_c = (_b = argv.properties) === null || _b === void 0 ? void 0 : _b.split(',')) !== null && _c !== void 0 ? _c : [];
+        const pathParts = argv.path?.split('.');
+        const properties = argv.properties?.split(',') ?? [];
         if (argv.sql) {
             const db = new alasql.Database();
             alasql.fn.listTables = () => {
@@ -190,24 +193,28 @@ yargs
                 return tableNames;
             };
             alasql.fn.pathValue = (path) => pathQuery(path.split("."), data, []);
-            const biomes = data.biomes.i.map((i) => {
+            const biomes = data.biomesData.i.map((i) => {
                 return {
                     i,
-                    name: data.biomes.name[i],
-                    color: data.biomes.color[i],
-                    // biomesMatrix: data.biomes.biomesMartix[i],
-                    habitability: data.biomes.habitability[i],
-                    icons: data.biomes.icons[i],
-                    cost: data.biomes.cost[i],
+                    name: data.biomesData.name[i],
+                    color: data.biomesData.color[i],
+                    habitability: data.biomesData.habitability[i],
+                    icons: data.biomesData.icons[i],
+                    cost: data.biomesData.cost[i],
                 };
             });
-            const markers = data.cells.markers.map(marker => (Object.assign(Object.assign({}, marker), { note: data.notes.find(note => note.id === `marker${marker.i}`) })));
-            const states = data.cells.states.map(state => {
-                var _a;
-                return (Object.assign(Object.assign({}, state), { military: (_a = state.military) === null || _a === void 0 ? void 0 : _a.map(regiment => (Object.assign(Object.assign({}, regiment), { note: data.notes.find(note => note.id === `regiment${state.i}-${regiment.i}`) }))) }));
-            });
-            const dataObj = Object.assign(Object.assign({}, data.cells), { biomes,
-                markers, notes: data.notes, states });
+            const markers = data.pack.markers.map(marker => ({ ...marker, note: data.notes.find(note => note.id === `marker${marker.i}`) }));
+            const states = data.pack.states.map(state => ({
+                ...state,
+                military: state.military?.map(regiment => ({ ...regiment, note: data.notes.find(note => note.id === `regiment${state.i}-${regiment.i}`) }))
+            }));
+            const dataObj = {
+                ...data.pack,
+                biomes,
+                markers,
+                notes: data.notes,
+                states
+            };
             Object.entries(dataObj).forEach(([key, value]) => {
                 const createTable = generateCreateTableStatement(key, value.filter(o => typeof o !== "number"));
                 db.exec(createTable);
@@ -243,12 +250,12 @@ yargs
     },
     handler(argv) {
         const data = readJsonFile(argv.file);
-        const cells = data.cells.cells;
+        const cells = data.pack.cells;
         const locations = argv.locations.split(',').map((location) => location.trim());
         const locationIds = locations.map((location) => {
             const locationId = parseInt(location, 10);
             if (isNaN(locationId)) {
-                const cell = getCellFromName(location, data.cells);
+                const cell = getCellFromName(location, data.pack);
                 if (cell) {
                     return cell.i;
                 }
@@ -268,7 +275,7 @@ yargs
                 process.exit(1);
             }
             const heightExponent = parseInt(data.settings.heightExponent);
-            const route = (0, astar_1.findRouteAStar)(startCell, endCell, cells, data.biomes.cost, heightExponent);
+            const route = (0, astar_1.findRouteAStar)(startCell, endCell, cells, data.biomesData.cost, heightExponent);
             if (route) {
                 routes.push(route.slice(0, -1)); // Remove the last element to avoid duplicating the intermediate locations
             }
@@ -277,10 +284,10 @@ yargs
                 process.exit(1);
             }
         }
-        const showBurg = (burgId) => burgId === 0 ? "" : `burg: ${data.cells.burgs[burgId].name},`;
+        const showBurg = (burgId) => burgId === 0 ? "" : `burg: ${data.pack.burgs[burgId].name},`;
         // Add the last location to the final route
         const finalRoute = routes.flat().concat(cells.find((cell) => cell.i === locationIds[locationIds.length - 1]));
-        const cellDistance = (a, b) => Math.sqrt(Math.pow((a.p[0] - b.p[0]), 2) + Math.pow((a.p[1] - b.p[1]), 2));
+        const cellDistance = (a, b) => Math.sqrt((a.p[0] - b.p[0]) ** 2 + (a.p[1] - b.p[1]) ** 2);
         let distance = 0;
         const addDistance = (i, route) => {
             if (i === 0)
@@ -292,7 +299,7 @@ yargs
         // Display the final route
         if (finalRoute.length > 0) {
             console.log('Route:');
-            finalRoute.forEach((cell, i, route) => console.log(`Cell i: ${cell.i}, distance: ${addDistance(i, route)} ${data.settings.distanceUnit}, ${showBurg(cell.burg)} biome: ${data.biomes.name[cell.biome]}, position: (${cell.p[0]}, ${cell.p[1]})`));
+            finalRoute.forEach((cell, i, route) => console.log(`Cell i: ${cell.i}, distance: ${addDistance(i, route)} ${data.settings.distanceUnit}, ${showBurg(cell.burg)} biome: ${data.biomesData.name[cell.biome]}, position: (${cell.p[0]}, ${cell.p[1]})`));
         }
         else {
             console.log('No route found between the provided locations.');
