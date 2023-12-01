@@ -1,15 +1,17 @@
-import { Cell, Cells, FantasyMap } from "./lib/map-types";
+import { PackCell, Pack, FantasyMap } from "./lib/map-types";
 import * as fs from 'fs';
 import * as yargs from 'yargs';
 import * as flat from 'flat';
 import * as util from "util";
 import { findRouteAStar } from "./lib/astar";
 
+const VERSION = '1.95.00';
+
 const alasql = require("alasql");
 
 const display = (x: unknown) => console.log(util.inspect(x, { depth: 6, colors: true, maxArrayLength: null }))
 
-const getCellFromName = (locationName: string, { burgs, cells }: Cells) => {
+const getCellFromName = (locationName: string, { burgs, cells }: Pack) => {
   const normalize = (s: string = "") => s.toLowerCase().replace(/[\s\W]/g, "")
   const namedBurgs = burgs.filter(burg => normalize(burg.name) === normalize(locationName))
   if (namedBurgs.length > 1) console.warn(`Location ${locationName} found at cells ${namedBurgs.map(burg => burg.cell).join(', ')}`)
@@ -23,6 +25,10 @@ const readJsonFile = (filePath: string) => {
   try {
     const jsonString = fs.readFileSync(filePath, 'utf-8');
     const map = JSON.parse(jsonString) as FantasyMap
+
+    if (map.info.version !== VERSION) {
+      console.warn(`Version mismatch: expected ${VERSION} but got ${map.info.version}. This may cause errors.`);
+    }
 
     return map
 
@@ -201,27 +207,26 @@ yargs
 
         alasql.fn.pathValue = (path: string) => pathQuery(path.split("."), data, [])
 
-        const biomes = data.biomes.i.map((i) => {
+        const biomes = data.biomesData.i.map((i) => {
           return {
             i,
-            name: data.biomes.name[i],
-            color: data.biomes.color[i],
-            // biomesMatrix: data.biomes.biomesMartix[i],
-            habitability: data.biomes.habitability[i],
-            icons: data.biomes.icons[i],
-            cost: data.biomes.cost[i],
+            name: data.biomesData.name[i],
+            color: data.biomesData.color[i],
+            habitability: data.biomesData.habitability[i],
+            icons: data.biomesData.icons[i],
+            cost: data.biomesData.cost[i],
           };
         });
 
-        const markers = data.cells.markers.map(marker => ({ ...marker, note: data.notes.find(note => note.id === `marker${marker.i}`) }))
-        const states = data.cells.states.map(state => ({
+        const markers = data.pack.markers.map(marker => ({ ...marker, note: data.notes.find(note => note.id === `marker${marker.i}`) }))
+        const states = data.pack.states.map(state => ({
           ...state,
           military: state.military?.map(regiment => ({ ...regiment, note: data.notes.find(note => note.id === `regiment${state.i}-${regiment.i}`) }))
         }))
 
 
         const dataObj: { [key: string]: any[] } = {
-          ...data.cells,
+          ...data.pack,
           biomes,
           markers,
           notes: data.notes,
@@ -261,13 +266,13 @@ yargs
     },
     handler(argv) {
       const data = readJsonFile(argv.file) as FantasyMap;
-      const cells = data.cells.cells;
+      const cells = data.pack.cells;
       const locations = argv.locations.split(',').map((location: string) => location.trim());
 
       const locationIds = locations.map((location:string) => {
         const locationId = parseInt(location, 10);
         if (isNaN(locationId)) {
-          const cell = getCellFromName(location, data.cells);
+          const cell = getCellFromName(location, data.pack);
           if (cell) {
             return cell.i;
           } else {
@@ -289,7 +294,7 @@ yargs
         }
 
         const heightExponent = parseInt(data.settings.heightExponent);
-        const route = findRouteAStar(startCell, endCell, cells, data.biomes.cost, heightExponent);
+        const route = findRouteAStar(startCell, endCell, cells, data.biomesData.cost, heightExponent);
         if (route) {
           routes.push(route.slice(0, -1)); // Remove the last element to avoid duplicating the intermediate locations
         } else {
@@ -298,14 +303,14 @@ yargs
         }
       }
 
-      const showBurg = (burgId:number) => burgId === 0? "" : `burg: ${data.cells.burgs[burgId].name},`
+      const showBurg = (burgId:number) => burgId === 0? "" : `burg: ${data.pack.burgs[burgId].name},`
       // Add the last location to the final route
       const finalRoute = routes.flat().concat(cells.find((cell) => cell.i === locationIds[locationIds.length - 1])!);
 
-      const cellDistance = (a: Cell, b: Cell) => Math.sqrt((a.p[0] - b.p[0]) ** 2 + (a.p[1] - b.p[1]) ** 2)
+      const cellDistance = (a: PackCell, b: PackCell) => Math.sqrt((a.p[0] - b.p[0]) ** 2 + (a.p[1] - b.p[1]) ** 2)
       let distance = 0
 
-      const addDistance = (i:number, route:Cell[]) => {
+      const addDistance = (i:number, route:PackCell[]) => {
         if (i===0) return 0
         distance = distance + cellDistance(route[i], route[i - 1])
         const scaledDistance = distance * parseFloat(data.settings.distanceScale)
@@ -315,7 +320,7 @@ yargs
       // Display the final route
       if (finalRoute.length > 0) {
         console.log('Route:');
-        finalRoute.forEach((cell, i, route) => console.log(`Cell i: ${cell.i}, distance: ${addDistance(i, route)} ${data.settings.distanceUnit}, ${showBurg(cell.burg)} biome: ${data.biomes.name[cell.biome]}, position: (${cell.p[0]}, ${cell.p[1]})`));
+        finalRoute.forEach((cell, i, route) => console.log(`Cell i: ${cell.i}, distance: ${addDistance(i, route)} ${data.settings.distanceUnit}, ${showBurg(cell.burg)} biome: ${data.biomesData.name[cell.biome]}, position: (${cell.p[0]}, ${cell.p[1]})`));
       } else {
         console.log('No route found between the provided locations.');
       }

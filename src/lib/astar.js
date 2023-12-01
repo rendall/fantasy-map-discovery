@@ -27,7 +27,7 @@ const reconstructPath = (cameFrom, current) => {
  * @returns The slope penalty. A higher penalty is applied when moving uphill, and a lower penalty is applied when moving downhill.
  */
 const slopePenalty = (currentHeight, neighborHeight, heightExponent, heightScalingFactor = 1) => {
-    const heightDifference = Math.abs(Math.pow(neighborHeight, heightExponent) - Math.pow(currentHeight, heightExponent)) * heightScalingFactor;
+    const heightDifference = Math.abs(neighborHeight ** heightExponent - currentHeight ** heightExponent) * heightScalingFactor;
     const isHigherNeighbor = neighborHeight > currentHeight;
     return isHigherNeighbor ? heightDifference : heightDifference / 2;
 };
