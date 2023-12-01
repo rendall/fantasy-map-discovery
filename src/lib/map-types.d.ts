@@ -1,449 +1,468 @@
-export interface FantasyMap {
-    info:      Info;
-    settings:  Settings;
-    coords:    Coords;
-    cells:     Cells;
-    vertices:  Vertex[];
-    biomes:    Biomes;
-    notes:     Note[];
-    nameBases: NameBase[];
+export type FantasyMap = {
+  info: Info;
+  settings: Settings;
+  mapCoordinates: Coords;
+  pack: Pack;
+  grid: Grid;
+  biomesData: Biomes;
+  notes: Note[];
+  nameBases: NameBase[];
 }
 
-export interface Biomes {
-    i:            number[];
-    name:         string[];
-    color:        string[];
-    biomesMartix: { [key: string]: number }[];
-    habitability: number[];
-    iconsDensity: number[];
-    icons:        Array<string[]>;
-    cost:         number[];
+export type Biomes = {
+  i: number[];
+  name: string[];
+  color: string[];
+  biomesMartix: { [key: string]: number }[];
+  habitability: number[];
+  iconsDensity: number[];
+  icons: Array<string[]>;
+  cost: number[];
 }
 
-export interface Cells {
-    cells:     Cell[];
-    features:  Array<FeatureClass | number>;
-    cultures:  Culture[];
-    burgs:     Burg[];
-    states:    State[];
-    provinces: Array<ProvinceClass | number>;
-    religions: Religion[];
-    rivers:    River[];
-    markers:   Marker[];
+export type Pack = {
+  cells: PackCell[];
+  vertices: Vertex[];
+  features: Array<FeatureClass | number>;
+  cultures: Culture[];
+  burgs: Burg[];
+  states: State[];
+  provinces: Array<ProvinceClass | number>;
+  religions: Religion[];
+  rivers: River[];
+  markers: Marker[];
 }
 
-export interface Burg {
-    cell?:       number;
-    x?:          number;
-    y?:          number;
-    state?:      number;
-    i?:          number;
-    culture?:    number;
-    name?:       string;
-    feature?:    number;
-    capital?:    number;
-    port?:       number;
-    population?: number;
-    type?:       BurgType;
-    coa?:        Coa;
-    citadel?:    number;
-    plaza?:      number;
-    walls?:      number;
-    shanty?:     number;
-    temple?:     number;
+export type Grid = {
+    cells: GridCell[];
+    vertices: Vertex[];
+    cellsDesired: number;
+    spacing: number;
+    cellsX: number;
+    cellsY: number;
+    points: [number, number][];
+    boundary: [number, number][];
+    seed: string,
+    features: Array<FeatureClass | number>;
+  }
+export type Burg = {
+  cell?: number;
+  x?: number;
+  y?: number;
+  state?: number;
+  i?: number;
+  culture?: number;
+  name?: string;
+  feature?: number;
+  capital?: number;
+  port?: number;
+  population?: number;
+  type?: BurgType;
+  coa?: Coa;
+  citadel?: number;
+  plaza?: number;
+  walls?: number;
+  shanty?: number;
+  temple?: number;
 }
 
-export interface Coa {
-    t1:          string;
-    ordinaries?: Ordinary[];
-    charges?:    Charge[];
-    shield:      Shield;
-    division?:   DivisionClass;
+export type Coa = {
+  t1: string;
+  ordinaries?: Ordinary[];
+  charges?: Charge[];
+  shield: Shield;
+  division?: DivisionClass;
 }
 
-export interface Charge {
-    charge:    string;
-    t:         T;
-    p:         string;
-    size:      number;
-    divided?:  Divided;
-    sinister?: number;
-    reversed?: number;
+export type Charge = {
+  charge: string;
+  t: HeraldicTincture;
+  t2?: HeraldicTincture;
+  t3?: HeraldicTincture;
+  p: string;
+  size: number;
+  divided?: Divided;
+  sinister?: number;
+  reversed?: number;
 }
 
-export enum Divided {
-    Counter = "counter",
+const divideds = ["counter", "dexter", "sinister"] as const;
+export type Divided = (typeof divideds)[number];
+
+const heraldicTinctures = [
+  "argent",
+  "azure",
+  "gules",
+  "or",
+  "purpure",
+  "sable",
+  "vert",
+] as const;
+export type HeraldicTincture = (typeof heraldicTinctures)[number];
+
+export type DivisionClass = {
+  division: DivisionType;
+  t: string;
+  line?: string;
 }
 
-export enum T {
-    Argent = "argent",
-    Azure = "azure",
-    Gules = "gules",
-    Or = "or",
-    Purpure = "purpure",
-    Sable = "sable",
-    Vert = "vert",
+const divisionTypes = [
+  "chevronny",
+  "gyronny",
+  "perBend",
+  "perBendSinister",
+  "perChevron",
+  "perChevronReversed",
+  "perCross",
+  "perFess",
+  "perPale",
+  "perPile",
+  "perSaltire",
+] as const;
+
+export type DivisionType = (typeof divisionTypes)[number];
+
+export type Ordinary = {
+  ordinary: string;
+  t: HeraldicTincture;
+  line?: string;
+  divided?: string;
 }
 
-export interface DivisionClass {
-    division: DivisionEnum;
-    t:        string;
-    line?:    string;
+const shields = [
+  "banner",
+  "boeotian",
+  "easterling",
+  "erebor",
+  "fantasy1",
+  "fantasy5",
+  "gondor",
+  "heater",
+  "hessen",
+  "horsehead2",
+  "ironHills",
+  "moriaOrc",
+  "oldFrench",
+  "oval",
+  "pavise",
+  "roman",
+  "round",
+  "spanish",
+  "urukHai",
+  "wedged",
+] as const;
+export type Shield = (typeof shields)[number];
+
+const burgTypes = ["Generic", "Hunting", "Lake", "Naval"] as const;
+
+export type BurgType = (typeof burgTypes)[number];
+
+export type GridCell = {
+  i: number;
+  v: number[];
+  c: number[];
+  b: number;
+  f: number;
+  t: number;
+  h: number;
+  temp: number;
+  prec: number;
 }
 
-export enum DivisionEnum {
-    Chevronny = "chevronny",
-    Gyronny = "gyronny",
-    PerBend = "perBend",
-    PerBendSinister = "perBendSinister",
-    PerChevron = "perChevron",
-    PerChevronReversed = "perChevronReversed",
-    PerCross = "perCross",
-    PerFess = "perFess",
-    PerPale = "perPale",
-    PerPile = "perPile",
-    PerSaltire = "perSaltire",
+export type PackCell = {
+  i: number;
+  v: number[];
+  c: number[];
+  p: number[];
+  g: number;
+  h: number;
+  area: number;
+  f: number;
+  t: number;
+  haven: number;
+  harbor: number;
+  fl: number;
+  r: number;
+  conf: number;
+  biome: number;
+  s: number;
+  pop: number;
+  culture: number;
+  burg: number;
+  road: number;
+  crossroad: number;
+  state: number;
+  religion: number;
+  province: number;
 }
 
-export interface Ordinary {
-    ordinary: string;
-    t:        T;
-    line?:    string;
-    divided?: string;
+export type Culture = {
+  name: string;
+  i: number;
+  base: number;
+  origins: Array<number | null>;
+  shield: Shield;
+  center?: number;
+  color?: string;
+  type?: string;
+  expansionism?: number;
+  code?: string;
 }
 
-export enum Shield {
-    Easterling = "easterling",
-    Erebor = "erebor",
-    Fantasy1 = "fantasy1",
-    Fantasy5 = "fantasy5",
-    Gondor = "gondor",
-    Hessen = "hessen",
-    Horsehead2 = "horsehead2",
-    IronHills = "ironHills",
-    MoriaOrc = "moriaOrc",
-    Pavise = "pavise",
-    Roman = "roman",
-    Round = "round",
-    UrukHai = "urukHai",
+export type FeatureClass = {
+  i: number;
+  land: boolean;
+  border: boolean;
+  type: FeatureType;
+  cells: number;
+  firstCell: number;
+  group: string;
+  area?: number;
+  vertices?: number[];
+  shoreline?: number[];
+  height?: number;
+  flux?: number;
+  temp?: number;
+  evaporation?: number;
+  inlets?: number[];
+  outlet?: number;
+  name?: string;
 }
 
-export enum BurgType {
-    Generic = "Generic",
-    Hunting = "Hunting",
-    Lake = "Lake",
-    Naval = "Naval",
+export type FeatureType = "ocean" | "lake" | "island";
+
+export type Marker = {
+  icon: string;
+  type: string;
+  px?: number;
+  x: number;
+  y: number;
+  cell: number;
+  i: number;
+  dy?: number;
+  dx?: number;
 }
 
-export interface Cell {
-    i:         number;
-    v:         number[];
-    c:         number[];
-    p:         number[];
-    g:         number;
-    h:         number;
-    area:      number;
-    f:         number;
-    t:         number;
-    haven:     number;
-    harbor:    number;
-    fl:        number;
-    r:         number;
-    conf:      number;
-    biome:     number;
-    s:         number;
-    pop:       number;
-    culture:   number;
-    burg:      number;
-    road:      number;
-    crossroad: number;
-    state:     number;
-    religion:  number;
-    province:  number;
+export type ProvinceClass = {
+  i: number;
+  state: number;
+  center: number;
+  burg: number;
+  name: string;
+  formName: string;
+  fullName: string;
+  color: string;
+  coa: Coa;
 }
 
-export interface Culture {
-    name:          string;
-    i:             number;
-    base:          number;
-    origins:       Array<number | null>;
-    shield:        Shield;
-    center?:       number;
-    color?:        string;
-    type?:         string;
-    expansionism?: number;
-    code?:         string;
+export type Religion = {
+  name: string;
+  i: number;
+  origins: number[] | null;
+  type?: ReligionType;
+  form?: string;
+  culture?: number;
+  center?: number;
+  deity?: null | string;
+  expansion?: Expansion;
+  expansionism?: number;
+  color?: string;
+  code?: string;
 }
 
-export interface FeatureClass {
-    i:            number;
-    land:         boolean;
-    border:       boolean;
-    type:         FeatureType;
-    cells:        number;
-    firstCell:    number;
-    group:        string;
-    area?:        number;
-    vertices?:    number[];
-    shoreline?:   number[];
-    height?:      number;
-    flux?:        number;
-    temp?:        number;
-    evaporation?: number;
-    inlets?:      number[];
-    outlet?:      number;
-    name?:        string;
+const expansions = ["culture", "global", "state"];
+export type Expansion = (typeof expansions)[number];
+
+const religions = ["Folk", "Organized"];
+
+export type ReligionType = (typeof religions)[number];
+
+export type River = {
+  i: number;
+  source: number;
+  mouth: number;
+  discharge: number;
+  length: number;
+  width: number;
+  widthFactor: number;
+  sourceWidth: number;
+  parent: number;
+  cells: number[];
+  basin: number;
+  name: string;
+  type: RiverType;
 }
 
-export enum FeatureType {
-    Island = "island",
-    Lake = "lake",
-    Ocean = "ocean",
+const rivers = ["Branch", "Brook", "Creek", "Fork", "River", "Stream"] as const;
+export type RiverType = (typeof rivers)[number];
+
+export type State = {
+  i: number;
+  name: string;
+  urban: number;
+  rural: number;
+  burgs: number;
+  area: number;
+  cells: number;
+  neighbors: number[];
+  diplomacy: Array<string[] | DiplomaticStatus>;
+  provinces: number[];
+  color?: string;
+  expansionism?: number;
+  capital?: number;
+  type?: string;
+  center?: number;
+  culture?: number;
+  coa?: Coa;
+  campaigns?: Campaign[];
+  form?: Government;
+  formName?: string;
+  fullName?: string;
+  pole?: number[];
+  alert?: number;
+  military?: StateMilitary[];
 }
 
-export interface Marker {
-    icon: string;
-    type: string;
-    px?:  number;
-    x:    number;
-    y:    number;
-    cell: number;
-    i:    number;
-    dy?:  number;
-    dx?:  number;
+export type Campaign = {
+  name: string;
+  start: number;
+  end: number;
 }
 
-export interface ProvinceClass {
-    i:        number;
-    state:    number;
-    center:   number;
-    burg:     number;
-    name:     string;
-    formName: string;
-    fullName: string;
-    color:    string;
-    coa:      Coa;
+const diplomaticStatuses = [
+  "Ally",
+  "Enemy",
+  "Friendly",
+  "Neutral",
+  "Rival",
+  "Suspicion",
+  "Suzerain",
+  "Unknown",
+  "Vassal",
+  "x",
+] as const;
+
+export type DiplomaticStatus = (typeof diplomaticStatuses)[number];
+
+const governments = ["Monarchy", "Theocracy", "Republic"] as const;
+
+export type Government = (typeof governments)[number];
+
+export type StateMilitary = {
+  i: number;
+  a: number;
+  cell: number;
+  x: number;
+  y: number;
+  bx: number;
+  by: number;
+  u: U;
+  n: number;
+  name: string;
+  state: number;
+  icon: Icon;
 }
 
-export interface Religion {
-    name:          string;
-    i:             number;
-    origins:       number[] | null;
-    type?:         ReligionType;
-    form?:         string;
-    culture?:      number;
-    center?:       number;
-    deity?:        null | string;
-    expansion?:    Expansion;
-    expansionism?: number;
-    color?:        string;
-    code?:         string;
+export type Icon = "🏹" | "💣" | "🐴" | "🌊" | "⚔️" | "👑";
+
+export type U = {
+  cavalry?: number;
+  infantry?: number;
+  archers?: number;
+  artillery?: number;
+  fleet?: number;
 }
 
-export enum Expansion {
-    Culture = "culture",
-    Global = "global",
-    State = "state",
+export type Coords = {
+  latT: number;
+  latN: number;
+  latS: number;
+  lonT: number;
+  lonW: number;
+  lonE: number;
 }
 
-export enum ReligionType {
-    Folk = "Folk",
-    Organized = "Organized",
+export type Info = {
+  version: string;
+  description: string;
+  exportedAt: Date | string;
+  mapName: string;
+  seed: string;
+  mapId: number;
 }
 
-export interface River {
-    i:           number;
-    source:      number;
-    mouth:       number;
-    discharge:   number;
-    length:      number;
-    width:       number;
-    widthFactor: number;
-    sourceWidth: number;
-    parent:      number;
-    cells:       number[];
-    basin:       number;
-    name:        string;
-    type:        RiverType;
+export type NameBase = {
+  name: string;
+  i: number;
+  min: number;
+  max: number;
+  d: string;
+  m: number;
+  b: string;
 }
 
-export enum RiverType {
-    Brook = "Brook",
-    Creek = "Creek",
-    Fork = "Fork",
-    River = "River",
-    Stream = "Stream",
+export type Note = {
+  id: string;
+  name: string;
+  legend: string;
 }
 
-export interface State {
-    i:             number;
-    name:          string;
-    urban:         number;
-    rural:         number;
-    burgs:         number;
-    area:          number;
-    cells:         number;
-    neighbors:     number[];
-    diplomacy:     Array<string[] | DiplomacyEnum>;
-    provinces:     number[];
-    color?:        string;
-    expansionism?: number;
-    capital?:      number;
-    type?:         string;
-    center?:       number;
-    culture?:      number;
-    coa?:          Coa;
-    campaigns?:    Campaign[];
-    form?:         Form;
-    formName?:     string;
-    fullName?:     string;
-    pole?:         number[];
-    alert?:        number;
-    military?:     StateMilitary[];
+export type Settings = {
+  distanceUnit: string;
+  distanceScale: string;
+  areaUnit: string;
+  heightUnit: string;
+  heightExponent: string;
+  temperatureScale: string;
+  barSize: string;
+  barLabel: string;
+  barBackOpacity: string;
+  barBackColor: string;
+  barPosX: string;
+  barPosY: string;
+  populationRate: number;
+  urbanization: number;
+  mapSize: string;
+  latitudeO: string;
+  prec: string;
+  options: Options;
+  mapName: string;
+  hideLabels: boolean;
+  stylePreset: string;
+  rescaleLabels: boolean;
+  urbanDensity: number;
 }
 
-export interface Campaign {
-    name:  string;
-    start: number;
-    end:   number;
+export type Options = {
+  pinNotes: boolean;
+  showMFCGMap: boolean;
+  winds: number[];
+  temperatureEquator: number;
+  temperatureNorthPole: number;
+  temperatureSouthPole: number;
+  stateLabelsMode: string;
+  year: number;
+  era: string;
+  eraShort: string;
+  military: OptionsMilitary[];
 }
 
-export enum DiplomacyEnum {
-    Ally = "Ally",
-    Enemy = "Enemy",
-    Friendly = "Friendly",
-    Neutral = "Neutral",
-    Rival = "Rival",
-    Suspicion = "Suspicion",
-    Suzerain = "Suzerain",
-    Unknown = "Unknown",
-    Vassal = "Vassal",
-    X = "x",
+export type OptionsMilitary = {
+  icon: Icon;
+  name: string;
+  rural: number;
+  urban: number;
+  crew: number;
+  power: number;
+  type: string;
+  separate: number;
 }
 
-export enum Form {
-    Monarchy = "Monarchy",
-    Theocracy = "Theocracy",
+export type Vertex = {
+  i: number;
+  p: [number, number];
+  v: [number, number, number];
+  c: [number, number, number];
 }
 
-export interface StateMilitary {
-    i:     number;
-    a:     number;
-    cell:  number;
-    x:     number;
-    y:     number;
-    bx:    number;
-    by:    number;
-    u:     U;
-    n:     number;
-    name:  string;
-    state: number;
-    icon:  Icon;
-}
 
-export enum Icon {
-    Empty = "\ud83d\udc34",
-    Fluffy = "\ud83c\udff9",
-    Icon = "\ud83c\udf0a",
-    Purple = "⚔️",
-    Sticky = "\ud83d\udca3",
-    Tentacled = "\ud83d\udc51",
-}
-
-export interface U {
-    cavalry?:   number;
-    infantry?:  number;
-    archers?:   number;
-    artillery?: number;
-    fleet?:     number;
-}
-
-export interface Coords {
-    latT: number;
-    latN: number;
-    latS: number;
-    lonT: number;
-    lonW: number;
-    lonE: number;
-}
-
-export interface Info {
-    version:     string;
-    description: string;
-    exportedAt:  Date;
-    mapName:     string;
-    seed:        string;
-    mapId:       number;
-}
-
-export interface NameBase {
-    name: string;
-    i:    number;
-    min:  number;
-    max:  number;
-    d:    string;
-    m:    number;
-    b:    string;
-}
-
-export interface Note {
-    id:     string;
-    name:   string;
-    legend: string;
-}
-
-export interface Settings {
-    distanceUnit:       string;
-    distanceScale:      string;
-    areaUnit:           string;
-    heightUnit:         string;
-    heightExponent:     string;
-    temperatureScale:   string;
-    barSize:            string;
-    barLabel:           string;
-    barBackOpacity:     string;
-    barBackColor:       string;
-    barPosX:            string;
-    barPosY:            string;
-    populationRate:     number;
-    urbanization:       number;
-    mapSize:            string;
-    latitudeO:          string;
-    temperatureEquator: string;
-    temperaturePole:    string;
-    prec:               string;
-    options:            Options;
-    mapName:            string;
-    hideLabels:         boolean;
-    stylePreset:        string;
-    rescaleLabels:      boolean;
-    urbanDensity:       number;
-}
-
-export interface Options {
-    pinNotes:        boolean;
-    showMFCGMap:     boolean;
-    winds:           number[];
-    stateLabelsMode: string;
-    year:            number;
-    era:             string;
-    eraShort:        string;
-    military:        OptionsMilitary[];
-}
-
-export interface OptionsMilitary {
-    icon:     Icon;
-    name:     string;
-    rural:    number;
-    urban:    number;
-    crew:     number;
-    power:    number;
-    type:     string;
-    separate: number;
-}
-
-export interface Vertex {
-    p: number[];
-    v: number[];
-    c: number[];
-}
