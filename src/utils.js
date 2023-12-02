@@ -1,6 +1,30 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Convert = void 0;
+exports.getCellFromName = exports.readJsonFile = exports.Convert = exports.VERSION = void 0;
+const fs = __importStar(require("fs"));
 // Converts JSON strings to/from your types
 // and asserts the results of JSON.parse at runtime
 // To parse this data:
@@ -11,6 +35,7 @@ exports.Convert = void 0;
 //
 // These functions will throw an error if the JSON doesn't
 // match the expected interface, even if the JSON is valid.
+exports.VERSION = '1.95.00';
 class Convert {
     static toMap(json) {
         return cast(JSON.parse(json), r("Map"));
@@ -578,3 +603,29 @@ const typeMap = {
         "\ud83d\udc51",
     ],
 };
+const readJsonFile = (filePath) => {
+    try {
+        const jsonString = fs.readFileSync(filePath, 'utf-8');
+        const map = JSON.parse(jsonString);
+        if (map.info.version !== exports.VERSION) {
+            console.warn(`Version mismatch: expected ${exports.VERSION} but got ${map.info.version}. This may cause errors.`);
+        }
+        return map;
+    }
+    catch (error) {
+        console.error(`Error reading the JSON file: ${error}`);
+        process.exit(1);
+    }
+};
+exports.readJsonFile = readJsonFile;
+const getCellFromName = (locationName, { burgs, cells }) => {
+    const normalize = (s = "") => s.toLowerCase().replace(/[\s\W]/g, "");
+    const namedBurgs = burgs.filter(burg => normalize(burg.name) === normalize(locationName));
+    if (namedBurgs.length > 1)
+        console.warn(`Location ${locationName} found at cells ${namedBurgs.map(burg => burg.cell).join(', ')}`);
+    if (namedBurgs.length > 0)
+        return cells.find(cell => cell.i === namedBurgs[0].cell);
+    if (!namedBurgs.length)
+        console.error(`Location ${locationName} not found. (normalized to ${normalize(locationName)})`);
+};
+exports.getCellFromName = getCellFromName;

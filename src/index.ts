@@ -1,42 +1,15 @@
-import { PackCell, Pack, FantasyMap } from "./lib/map-types";
-import * as fs from 'fs';
+import { PackCell, FantasyMap } from "./lib/map-types";
 import * as yargs from 'yargs';
 import * as flat from 'flat';
 import * as util from "util";
 import { findRouteAStar } from "./lib/astar";
+import { VERSION, getCellFromName, readJsonFile } from "./utils";
+import { routeHandler } from "./lib/route";
 
-const VERSION = '1.95.00';
 
 const alasql = require("alasql");
 
 const display = (x: unknown) => console.log(util.inspect(x, { depth: 6, colors: true, maxArrayLength: null }))
-
-const getCellFromName = (locationName: string, { burgs, cells }: Pack) => {
-  const normalize = (s: string = "") => s.toLowerCase().replace(/[\s\W]/g, "")
-  const namedBurgs = burgs.filter(burg => normalize(burg.name) === normalize(locationName))
-  if (namedBurgs.length > 1) console.warn(`Location ${locationName} found at cells ${namedBurgs.map(burg => burg.cell).join(', ')}`)
-  if (namedBurgs.length > 0) return cells.find(cell => cell.i === namedBurgs[0].cell)
-  if (!namedBurgs.length) console.error(`Location ${locationName} not found. (normalized to ${normalize(locationName)})`)
-}
-
-
-// Read the JSON file and parse it into an object
-const readJsonFile = (filePath: string) => {
-  try {
-    const jsonString = fs.readFileSync(filePath, 'utf-8');
-    const map = JSON.parse(jsonString) as FantasyMap
-
-    if (map.info.version !== VERSION) {
-      console.warn(`Version mismatch: expected ${VERSION} but got ${map.info.version}. This may cause errors.`);
-    }
-
-    return map
-
-  } catch (error) {
-    console.error(`Error reading the JSON file: ${error}`);
-    process.exit(1);
-  }
-}
 
 interface QueryResult {
   [key: string]: any;
@@ -264,66 +237,13 @@ yargs
         type: 'string',
       },
     },
-    handler(argv) {
-      const data = readJsonFile(argv.file) as FantasyMap;
-      const cells = data.pack.cells;
-      const locations = argv.locations.split(',').map((location: string) => location.trim());
-
-      const locationIds = locations.map((location:string) => {
-        const locationId = parseInt(location, 10);
-        if (isNaN(locationId)) {
-          const cell = getCellFromName(location, data.pack);
-          if (cell) {
-            return cell.i;
-          } else {
-            console.error(`Location ${location} not found.`);
-            process.exit(1);
-          }
-        }
-        return locationId;
-      });
-
-      const routes = [];
-      for (let i = 0; i < locationIds.length - 1; i++) {
-        const startCell = cells.find((cell) => cell.i === locationIds[i]);
-        const endCell = cells.find((cell) => cell.i === locationIds[i + 1]);
-
-        if (!startCell || !endCell) {
-          console.error('One or both of the provided cell indices are not found in the map data.');
-          process.exit(1);
-        }
-
-        const heightExponent = parseInt(data.settings.heightExponent);
-        const route = findRouteAStar(startCell, endCell, cells, data.biomesData.cost, heightExponent);
-        if (route) {
-          routes.push(route.slice(0, -1)); // Remove the last element to avoid duplicating the intermediate locations
-        } else {
-          console.log(`No route found between locations ${locations[i]} and ${locations[i + 1]}.`);
-          process.exit(1);
-        }
-      }
-
-      const showBurg = (burgId:number) => burgId === 0? "" : `burg: ${data.pack.burgs[burgId].name},`
-      // Add the last location to the final route
-      const finalRoute = routes.flat().concat(cells.find((cell) => cell.i === locationIds[locationIds.length - 1])!);
-
-      const cellDistance = (a: PackCell, b: PackCell) => Math.sqrt((a.p[0] - b.p[0]) ** 2 + (a.p[1] - b.p[1]) ** 2)
-      let distance = 0
-
-      const addDistance = (i:number, route:PackCell[]) => {
-        if (i===0) return 0
-        distance = distance + cellDistance(route[i], route[i - 1])
-        const scaledDistance = distance * parseFloat(data.settings.distanceScale)
-        return parseFloat(scaledDistance.toFixed(1))
-      }
-
-      // Display the final route
-      if (finalRoute.length > 0) {
-        console.log('Route:');
-        finalRoute.forEach((cell, i, route) => console.log(`Cell i: ${cell.i}, distance: ${addDistance(i, route)} ${data.settings.distanceUnit}, ${showBurg(cell.burg)} biome: ${data.biomesData.name[cell.biome]}, position: (${cell.p[0]}, ${cell.p[1]})`));
-      } else {
-        console.log('No route found between the provided locations.');
-      }
+    handler:routeHandler
+  })
+  .command({
+    command: 'version',
+    describe: 'Display the version number',
+    handler() {
+      console.log(VERSION);
     },
   })
   .demandCommand(1, '')

@@ -1,4 +1,5 @@
-import { FantasyMap } from "./lib/map-types";
+import type { FantasyMap, Pack } from "./lib/map-types";
+import * as fs from 'fs';
 // Converts JSON strings to/from your types
 // and asserts the results of JSON.parse at runtime
 // To parse this data:
@@ -9,6 +10,7 @@ import { FantasyMap } from "./lib/map-types";
 //
 // These functions will throw an error if the JSON doesn't
 // match the expected interface, even if the JSON is valid.
+export const VERSION = '1.95.00';
 export class Convert {
     public static toMap(json: string): FantasyMap {
         return cast(JSON.parse(json), r("Map"));
@@ -584,3 +586,28 @@ const typeMap: any = {
         "\ud83d\udc51",
     ],
 };
+
+export const readJsonFile = (filePath: string) => {
+  try {
+    const jsonString = fs.readFileSync(filePath, 'utf-8');
+    const map = JSON.parse(jsonString) as FantasyMap
+
+    if (map.info.version !== VERSION) {
+      console.warn(`Version mismatch: expected ${VERSION} but got ${map.info.version}. This may cause errors.`);
+    }
+
+    return map
+
+  } catch (error) {
+    console.error(`Error reading the JSON file: ${error}`);
+    process.exit(1);
+  }
+}
+
+export const getCellFromName = (locationName: string, { burgs, cells }: Pack) => {
+  const normalize = (s: string = "") => s.toLowerCase().replace(/[\s\W]/g, "")
+  const namedBurgs = burgs.filter(burg => normalize(burg.name) === normalize(locationName))
+  if (namedBurgs.length > 1) console.warn(`Location ${locationName} found at cells ${namedBurgs.map(burg => burg.cell).join(', ')}`)
+  if (namedBurgs.length > 0) return cells.find(cell => cell.i === namedBurgs[0].cell)
+  if (!namedBurgs.length) console.error(`Location ${locationName} not found. (normalized to ${normalize(locationName)})`)
+}

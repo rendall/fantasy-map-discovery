@@ -23,39 +23,13 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs = __importStar(require("fs"));
 const yargs = __importStar(require("yargs"));
 const flat = __importStar(require("flat"));
 const util = __importStar(require("util"));
-const astar_1 = require("./lib/astar");
-const VERSION = '1.96.00';
+const utils_1 = require("./utils");
+const route_1 = require("./lib/route");
 const alasql = require("alasql");
 const display = (x) => console.log(util.inspect(x, { depth: 6, colors: true, maxArrayLength: null }));
-const getCellFromName = (locationName, { burgs, cells }) => {
-    const normalize = (s = "") => s.toLowerCase().replace(/[\s\W]/g, "");
-    const namedBurgs = burgs.filter(burg => normalize(burg.name) === normalize(locationName));
-    if (namedBurgs.length > 1)
-        console.warn(`Location ${locationName} found at cells ${namedBurgs.map(burg => burg.cell).join(', ')}`);
-    if (namedBurgs.length > 0)
-        return cells.find(cell => cell.i === namedBurgs[0].cell);
-    if (!namedBurgs.length)
-        console.error(`Location ${locationName} not found. (normalized to ${normalize(locationName)})`);
-};
-// Read the JSON file and parse it into an object
-const readJsonFile = (filePath) => {
-    try {
-        const jsonString = fs.readFileSync(filePath, 'utf-8');
-        const map = JSON.parse(jsonString);
-        if (map.info.version !== VERSION) {
-            console.warn(`Version mismatch: expected ${VERSION} but got ${map.info.version}. This may cause errors.`);
-        }
-        return map;
-    }
-    catch (error) {
-        console.error(`Error reading the JSON file: ${error}`);
-        process.exit(1);
-    }
-};
 const pathQuery = (pathParts, data, properties) => {
     let result = data;
     for (const part of pathParts) {
@@ -183,7 +157,7 @@ yargs
             console.error('You must provide at least one of the following options: --path, --term, or --sql.');
             process.exit(1);
         }
-        const data = readJsonFile(argv.file);
+        const data = (0, utils_1.readJsonFile)(argv.file);
         const pathParts = argv.path?.split('.');
         const properties = argv.properties?.split(',') ?? [];
         if (argv.sql) {
@@ -248,62 +222,13 @@ yargs
             type: 'string',
         },
     },
-    handler(argv) {
-        const data = readJsonFile(argv.file);
-        const cells = data.pack.cells;
-        const locations = argv.locations.split(',').map((location) => location.trim());
-        const locationIds = locations.map((location) => {
-            const locationId = parseInt(location, 10);
-            if (isNaN(locationId)) {
-                const cell = getCellFromName(location, data.pack);
-                if (cell) {
-                    return cell.i;
-                }
-                else {
-                    console.error(`Location ${location} not found.`);
-                    process.exit(1);
-                }
-            }
-            return locationId;
-        });
-        const routes = [];
-        for (let i = 0; i < locationIds.length - 1; i++) {
-            const startCell = cells.find((cell) => cell.i === locationIds[i]);
-            const endCell = cells.find((cell) => cell.i === locationIds[i + 1]);
-            if (!startCell || !endCell) {
-                console.error('One or both of the provided cell indices are not found in the map data.');
-                process.exit(1);
-            }
-            const heightExponent = parseInt(data.settings.heightExponent);
-            const route = (0, astar_1.findRouteAStar)(startCell, endCell, cells, data.biomesData.cost, heightExponent);
-            if (route) {
-                routes.push(route.slice(0, -1)); // Remove the last element to avoid duplicating the intermediate locations
-            }
-            else {
-                console.log(`No route found between locations ${locations[i]} and ${locations[i + 1]}.`);
-                process.exit(1);
-            }
-        }
-        const showBurg = (burgId) => burgId === 0 ? "" : `burg: ${data.pack.burgs[burgId].name},`;
-        // Add the last location to the final route
-        const finalRoute = routes.flat().concat(cells.find((cell) => cell.i === locationIds[locationIds.length - 1]));
-        const cellDistance = (a, b) => Math.sqrt((a.p[0] - b.p[0]) ** 2 + (a.p[1] - b.p[1]) ** 2);
-        let distance = 0;
-        const addDistance = (i, route) => {
-            if (i === 0)
-                return 0;
-            distance = distance + cellDistance(route[i], route[i - 1]);
-            const scaledDistance = distance * parseFloat(data.settings.distanceScale);
-            return parseFloat(scaledDistance.toFixed(1));
-        };
-        // Display the final route
-        if (finalRoute.length > 0) {
-            console.log('Route:');
-            finalRoute.forEach((cell, i, route) => console.log(`Cell i: ${cell.i}, distance: ${addDistance(i, route)} ${data.settings.distanceUnit}, ${showBurg(cell.burg)} biome: ${data.biomesData.name[cell.biome]}, position: (${cell.p[0]}, ${cell.p[1]})`));
-        }
-        else {
-            console.log('No route found between the provided locations.');
-        }
+    handler: route_1.routeHandler
+})
+    .command({
+    command: 'version',
+    describe: 'Display the version number',
+    handler() {
+        console.log(utils_1.VERSION);
     },
 })
     .demandCommand(1, '')
