@@ -1,4 +1,4 @@
-import type { FantasyMap, Pack } from "./lib/map-types";
+import type { World, Pack, WorldRule } from "./lib/map-types.js";
 import * as fs from 'fs';
 // Converts JSON strings to/from your types
 // and asserts the results of JSON.parse at runtime
@@ -12,11 +12,11 @@ import * as fs from 'fs';
 // match the expected interface, even if the JSON is valid.
 export const VERSION = '1.95.00';
 export class Convert {
-    public static toMap(json: string): FantasyMap {
+    public static toMap(json: string): World {
         return cast(JSON.parse(json), r("Map"));
     }
 
-    public static mapToJson(value: FantasyMap): string {
+    public static mapToJson(value: World): string {
         return JSON.stringify(uncast(value, r("Map")), null, 2);
     }
 }
@@ -590,7 +590,7 @@ const typeMap: any = {
 export const readJsonFile = (filePath: string) => {
   try {
     const jsonString = fs.readFileSync(filePath, 'utf-8');
-    const map = JSON.parse(jsonString) as FantasyMap
+    const map = JSON.parse(jsonString) as World
 
     if (map.info.version !== VERSION) {
       console.warn(`Version mismatch: expected ${VERSION} but got ${map.info.version}. This may cause errors.`);
@@ -608,6 +608,25 @@ export const getCellFromName = (locationName: string, { burgs, cells }: Pack) =>
   const normalize = (s: string = "") => s.toLowerCase().replace(/[\s\W]/g, "")
   const namedBurgs = burgs.filter(burg => normalize(burg.name) === normalize(locationName))
   if (namedBurgs.length > 1) console.warn(`Location ${locationName} found at cells ${namedBurgs.map(burg => burg.cell).join(', ')}`)
-  if (namedBurgs.length > 0) return cells.find(cell => cell.i === namedBurgs[0].cell)
-  if (!namedBurgs.length) console.error(`Location ${locationName} not found. (normalized to ${normalize(locationName)})`)
+  if (namedBurgs.length > 0) return cells.find(cell => cell.i === namedBurgs[0]?.cell)
+  else throw `Location ${locationName} not found. (normalized to ${normalize(locationName)})`
 }
+
+
+export const readRulesFile = (filePath: string): WorldRule[] => {
+  try {
+    // Require the JavaScript file, which should export an array of functions
+    const rules: WorldRule[] = require(filePath);
+
+    // Optional: Validate that the imported data is an array of functions
+    if (!Array.isArray(rules) || !rules.every(rule => typeof rule === 'function')) {
+      throw new Error('The file does not export an array of functions');
+    }
+
+    return rules;
+
+  } catch (error) {
+    console.error(`Error reading the rules file: ${error}`);
+    process.exit(1);
+  }
+};

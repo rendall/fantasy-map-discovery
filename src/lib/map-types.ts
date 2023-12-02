@@ -1,4 +1,4 @@
-export type FantasyMap = {
+export type World = {
   info: Info;
   settings: Settings;
   mapCoordinates: Coords;
@@ -465,4 +465,4 @@ export type Vertex = {
   c: [number, number, number];
 }
 
-
+export type WorldRule = (world: World) => World;

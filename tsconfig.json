@@ -1,11 +1,28 @@
 {
+  "extends": "@sindresorhus/tsconfig",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "NodeNext",
-    "strict": true,
+    "declaration": false,
     "downlevelIteration": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "importsNotUsedAsValues": "remove",               /* Specify emit/checking behavior for imports that are only used for types. */    
+    "isolatedModules": true,                          /* Ensure that each file can be safely transpiled without relying on other imports. */
+    "lib": ["ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist/",                              /* Specify an output folder for all emitted files. */
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "sourceMap":false,                                /* Create source map files for emitted JavaScript files. */
+    "strict": true,
+    "target": "ESNext"
   },
-  "include": ["src"]
+  "include": [
+    "./src/**/*.ts"
+  ],
+  "ts-node": {
+    "esm": true,
+    "transpileOnly": true,
+    "files": true,
+    "experimentalResolver": true
+  }
 }

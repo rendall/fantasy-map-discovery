@@ -1,18 +1,19 @@
 import { ArgumentsCamelCase } from "yargs";
-import { getCellFromName, readJsonFile } from "../utils";
-import type { FantasyMap, PackCell } from "./map-types";
-import { findRouteAStar } from "./astar";
+import { getCellFromName, readJsonFile } from "../utils.js";
+import type { World, PackCell } from "./map-types.ts";
+import { findRouteAStar } from "./astar.js";
 
 export const routeHandler: (
   args: ArgumentsCamelCase<any>
 ) => void | Promise<void> = (argv) => {
-  const data = readJsonFile(argv.file) as FantasyMap;
+  const { file, locations } = argv;
+  const data = readJsonFile(file) as World;
   const cells = data.pack.cells;
-  const locations = argv.locations
+  const locationsArray = locations
     .split(",")
     .map((location: string) => location.trim());
 
-  const locationIds = locations.map((location: string) => {
+  const locationIds = locationsArray.map((location: string) => {
     const locationId = parseInt(location, 10);
     if (isNaN(locationId)) {
       const cell = getCellFromName(location, data.pack);
@@ -59,21 +60,26 @@ export const routeHandler: (
   }
 
   const showBurg = (burgId: number) =>
-    burgId === 0 ? "" : `burg: ${data.pack.burgs[burgId].name},`;
+    burgId === 0 ? "" : `burg: ${data.pack.burgs[burgId]?.name},`;
   // Add the last location to the final route
   const finalRoute = routes
     .flat()
     .concat(
-      cells.find((cell) => cell.i === locationIds[locationIds.length - 1])!
+      cells.find((cell) => cell.i === locationIds[locationIds.length - 1]) ?? []
     );
 
   const cellDistance = (a: PackCell, b: PackCell) =>
-    Math.sqrt((a.p[0] - b.p[0]) ** 2 + (a.p[1] - b.p[1]) ** 2);
+    Math.sqrt((a.p[0]! - b.p[0]!) ** 2 + (a.p[1]! - b.p[1]!) ** 2);
+
   let distance = 0;
 
   const addDistance = (i: number, route: PackCell[]) => {
     if (i === 0) return 0;
-    distance = distance + cellDistance(route[i], route[i - 1]);
+    const iLeg = route[i];
+    if (!iLeg) return 0;
+    const lastLeg = route[i - 1];
+    if (!lastLeg) return 0;
+    distance = distance + cellDistance(iLeg, lastLeg);
     const scaledDistance = distance * parseFloat(data.settings.distanceScale);
     return parseFloat(scaledDistance.toFixed(1));
   };

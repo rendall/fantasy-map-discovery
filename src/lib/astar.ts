@@ -1,8 +1,9 @@
-import { PackCell } from "./map-types";
+import type { PackCell } from "./map-types.ts";
 const MARINE_BIOME_INDEX = 0
 const heuristic = (cellA:PackCell, cellB:PackCell) => {
   const [x1, y1] = cellA.p;
   const [x2, y2] = cellB.p;
+  if (x1 === undefined || x2 === undefined || y1 === undefined || y2 === undefined) throw new Error(`Bad data. cell ${cellA.i} or ${cellB.i} has no coordinates`)
   return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
 };
 
@@ -67,7 +68,7 @@ export const findRouteAStar = (start: PackCell, end: PackCell, cells: PackCell[]
     }
 
     openSet.delete(current);
-    current.c.forEach((neighborIndex) => {
+    current.c.forEach((neighborIndex:number) => {
       const neighbor = cells.find(cell => cell.i === neighborIndex);
       if (!neighbor) throw new Error(`Bad data. cell ${neighborIndex} not found ( from cell ${current.i} neighbors ${current.c} )`)
       // Only enter the Marine biome from towns with water routes
@@ -83,7 +84,7 @@ export const findRouteAStar = (start: PackCell, end: PackCell, cells: PackCell[]
           return; // Skip this neighbor, as it doesn't meet the conditions for leaving the Marine biome
         }
       }
-      const biomePenalty = biomes[neighbor.biome]
+      const biomePenalty = biomes[neighbor.biome] ?? 1
       const preferRoads = neighbor.road? 0.1 : 1
       const terrainCost = biomePenalty  + slopePenalty(current.h, neighbor.h, heightExponent, 1) + heightPenalty(neighbor, end);
       const tentativeGScore = gScore.get(current.i)! + heuristic(current, neighbor) + terrainCost * preferRoads

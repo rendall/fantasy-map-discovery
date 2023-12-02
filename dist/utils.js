@@ -1,30 +1,4 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCellFromName = exports.readJsonFile = exports.Convert = exports.VERSION = void 0;
-const fs = __importStar(require("fs"));
+import * as fs from 'fs';
 // Converts JSON strings to/from your types
 // and asserts the results of JSON.parse at runtime
 // To parse this data:
@@ -35,8 +9,8 @@ const fs = __importStar(require("fs"));
 //
 // These functions will throw an error if the JSON doesn't
 // match the expected interface, even if the JSON is valid.
-exports.VERSION = '1.95.00';
-class Convert {
+export const VERSION = '1.95.00';
+export class Convert {
     static toMap(json) {
         return cast(JSON.parse(json), r("Map"));
     }
@@ -44,7 +18,6 @@ class Convert {
         return JSON.stringify(uncast(value, r("Map")), null, 2);
     }
 }
-exports.Convert = Convert;
 function invalidValue(typ, val, key, parent = '') {
     const prettyTyp = prettyTypeName(typ);
     const parentText = parent ? ` on ${parent}` : '';
@@ -603,12 +576,12 @@ const typeMap = {
         "\ud83d\udc51",
     ],
 };
-const readJsonFile = (filePath) => {
+export const readJsonFile = (filePath) => {
     try {
         const jsonString = fs.readFileSync(filePath, 'utf-8');
         const map = JSON.parse(jsonString);
-        if (map.info.version !== exports.VERSION) {
-            console.warn(`Version mismatch: expected ${exports.VERSION} but got ${map.info.version}. This may cause errors.`);
+        if (map.info.version !== VERSION) {
+            console.warn(`Version mismatch: expected ${VERSION} but got ${map.info.version}. This may cause errors.`);
         }
         return map;
     }
@@ -617,15 +590,28 @@ const readJsonFile = (filePath) => {
         process.exit(1);
     }
 };
-exports.readJsonFile = readJsonFile;
-const getCellFromName = (locationName, { burgs, cells }) => {
+export const getCellFromName = (locationName, { burgs, cells }) => {
     const normalize = (s = "") => s.toLowerCase().replace(/[\s\W]/g, "");
     const namedBurgs = burgs.filter(burg => normalize(burg.name) === normalize(locationName));
     if (namedBurgs.length > 1)
         console.warn(`Location ${locationName} found at cells ${namedBurgs.map(burg => burg.cell).join(', ')}`);
     if (namedBurgs.length > 0)
-        return cells.find(cell => cell.i === namedBurgs[0].cell);
-    if (!namedBurgs.length)
-        console.error(`Location ${locationName} not found. (normalized to ${normalize(locationName)})`);
+        return cells.find(cell => cell.i === namedBurgs[0]?.cell);
+    else
+        throw `Location ${locationName} not found. (normalized to ${normalize(locationName)})`;
 };
-exports.getCellFromName = getCellFromName;
+export const readRulesFile = (filePath) => {
+    try {
+        // Require the JavaScript file, which should export an array of functions
+        const rules = require(filePath);
+        // Optional: Validate that the imported data is an array of functions
+        if (!Array.isArray(rules) || !rules.every(rule => typeof rule === 'function')) {
+            throw new Error('The file does not export an array of functions');
+        }
+        return rules;
+    }
+    catch (error) {
+        console.error(`Error reading the rules file: ${error}`);
+        process.exit(1);
+    }
+};

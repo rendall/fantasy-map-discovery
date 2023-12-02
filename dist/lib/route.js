@@ -1,18 +1,16 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.routeHandler = void 0;
-const utils_1 = require("../utils");
-const astar_1 = require("./astar");
-const routeHandler = (argv) => {
-    const data = (0, utils_1.readJsonFile)(argv.file);
+import { getCellFromName, readJsonFile } from "../utils.js";
+import { findRouteAStar } from "./astar.js";
+export const routeHandler = (argv) => {
+    const { file, locations } = argv;
+    const data = readJsonFile(file);
     const cells = data.pack.cells;
-    const locations = argv.locations
+    const locationsArray = locations
         .split(",")
         .map((location) => location.trim());
-    const locationIds = locations.map((location) => {
+    const locationIds = locationsArray.map((location) => {
         const locationId = parseInt(location, 10);
         if (isNaN(locationId)) {
-            const cell = (0, utils_1.getCellFromName)(location, data.pack);
+            const cell = getCellFromName(location, data.pack);
             if (cell) {
                 return cell.i;
             }
@@ -32,7 +30,7 @@ const routeHandler = (argv) => {
             process.exit(1);
         }
         const heightExponent = parseInt(data.settings.heightExponent);
-        const route = (0, astar_1.findRouteAStar)(startCell, endCell, cells, data.biomesData.cost, heightExponent);
+        const route = findRouteAStar(startCell, endCell, cells, data.biomesData.cost, heightExponent);
         if (route) {
             routes.push(route.slice(0, -1)); // Remove the last element to avoid duplicating the intermediate locations
         }
@@ -41,17 +39,23 @@ const routeHandler = (argv) => {
             process.exit(1);
         }
     }
-    const showBurg = (burgId) => burgId === 0 ? "" : `burg: ${data.pack.burgs[burgId].name},`;
+    const showBurg = (burgId) => burgId === 0 ? "" : `burg: ${data.pack.burgs[burgId]?.name},`;
     // Add the last location to the final route
     const finalRoute = routes
         .flat()
-        .concat(cells.find((cell) => cell.i === locationIds[locationIds.length - 1]));
+        .concat(cells.find((cell) => cell.i === locationIds[locationIds.length - 1]) ?? []);
     const cellDistance = (a, b) => Math.sqrt((a.p[0] - b.p[0]) ** 2 + (a.p[1] - b.p[1]) ** 2);
     let distance = 0;
     const addDistance = (i, route) => {
         if (i === 0)
             return 0;
-        distance = distance + cellDistance(route[i], route[i - 1]);
+        const iLeg = route[i];
+        if (!iLeg)
+            return 0;
+        const lastLeg = route[i - 1];
+        if (!lastLeg)
+            return 0;
+        distance = distance + cellDistance(iLeg, lastLeg);
         const scaledDistance = distance * parseFloat(data.settings.distanceScale);
         return parseFloat(scaledDistance.toFixed(1));
     };
@@ -64,4 +68,3 @@ const routeHandler = (argv) => {
         console.log("No route found between the provided locations.");
     }
 };
-exports.routeHandler = routeHandler;

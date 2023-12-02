@@ -1,5 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
 const divideds = ["counter", "dexter", "sinister"];
 const heraldicTinctures = [
     "argent",
@@ -62,3 +60,4 @@ const diplomaticStatuses = [
     "x",
 ];
 const governments = ["Monarchy", "Theocracy", "Republic"];
+export {};
