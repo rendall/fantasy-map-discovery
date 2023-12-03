@@ -1,15 +1,11 @@
 #!/usr/bin/env node
-import yargs from 'yargs';
-import { hideBin } from 'yargs/helpers';
+import yargs from "yargs";
+import { hideBin } from "yargs/helpers";
 import { flatten } from "flat";
-import * as util from "util";
-import { VERSION, readJsonFile } from "./utils.js";
+import { VERSION, display, readJsonFile } from "./utils.js";
 import { routeHandler } from "./lib/route.js";
 import { incrementHandler } from "./lib/increment.js";
 import alasql from "alasql";
-// In an async function or top-level await (if supported)
-// Use alasql here
-const display = (x) => console.log(util.inspect(x, { depth: 6, colors: true, maxArrayLength: null }));
 const pathQuery = (pathParts, data, properties) => {
     let result = data;
     for (const part of pathParts) {
@@ -152,6 +148,18 @@ yargs(hideBin(process.argv))
                 return tableNames;
             };
             alasql.fn.pathValue = (path) => pathQuery(path.split("."), data, []);
+            /** Map a query to each id of an array in turn, returning an array */
+            alasql.fn.mapIdsToQuery = (idArgs, query) => {
+                const ids = typeof idArgs === "string" ? JSON.parse(idArgs) : idArgs;
+                return ids
+                    .map((id) => {
+                    // Replace 'id' placeholder in query with the actual ID
+                    const modifiedQuery = query.replace(/\$id/g, `${id}`);
+                    // Execute the query and return the result
+                    return db.exec(modifiedQuery);
+                })
+                    .flat(); // Flatten the array if each query returns an array
+            };
             const biomes = data.biomesData.i.map((i) => {
                 return {
                     i,
@@ -162,6 +170,11 @@ yargs(hideBin(process.argv))
                     cost: data.biomesData.cost[i],
                 };
             });
+            /*
+    
+    SELECT states.fullName AS state, burgs.name AS capital, cultures.name AS culture, (SELECT VALUE mapIdsToQuery(states.neighbors, "SELECT fullName FROM states WHERE i = $id")) AS neighborNames FROM states JOIN burgs ON states.capital = burgs.i JOIN cultures ON states.culture = cultures.i
+    
+        */
             const markers = data.pack.markers.map((marker) => ({
                 ...marker,
                 note: data.notes.find((note) => note.id === `marker${marker.i}`),
