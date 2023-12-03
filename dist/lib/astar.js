@@ -1,10 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.findRouteAStar = void 0;
 const MARINE_BIOME_INDEX = 0;
 const heuristic = (cellA, cellB) => {
     const [x1, y1] = cellA.p;
     const [x2, y2] = cellB.p;
+    if (x1 === undefined || x2 === undefined || y1 === undefined || y2 === undefined)
+        throw new Error(`Bad data. cell ${cellA.i} or ${cellB.i} has no coordinates`);
     return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
 };
 const reconstructPath = (cameFrom, current) => {
@@ -47,7 +46,7 @@ const heightPenalty = (current, end, distanceScalingFactor = 1) => {
     const normalizedDistance = 1 - (distanceToDestination / (distanceToDestination + distanceScalingFactor));
     return heightDifference * normalizedDistance;
 };
-const findRouteAStar = (start, end, cells, biomes, heightExponent = 2) => {
+export const findRouteAStar = (start, end, cells, biomes, heightExponent = 2) => {
     const openSet = new Set([start]);
     const cameFrom = new Map();
     const gScore = new Map(cells.map((cell) => [cell.i, Infinity]));
@@ -76,7 +75,7 @@ const findRouteAStar = (start, end, cells, biomes, heightExponent = 2) => {
                     return; // Skip this neighbor, as it doesn't meet the conditions for leaving the Marine biome
                 }
             }
-            const biomePenalty = biomes[neighbor.biome];
+            const biomePenalty = biomes[neighbor.biome] ?? 1;
             const preferRoads = neighbor.road ? 0.1 : 1;
             const terrainCost = biomePenalty + slopePenalty(current.h, neighbor.h, heightExponent, 1) + heightPenalty(neighbor, end);
             const tentativeGScore = gScore.get(current.i) + heuristic(current, neighbor) + terrainCost * preferRoads;
@@ -92,4 +91,3 @@ const findRouteAStar = (start, end, cells, biomes, heightExponent = 2) => {
     }
     return null;
 };
-exports.findRouteAStar = findRouteAStar;

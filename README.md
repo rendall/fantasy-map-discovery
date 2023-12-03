@@ -30,13 +30,13 @@ There is a [search](#search-command) command and a [route](#route-command) comma
 After installation, navigate to the project directory and type
 
 ```
-node src/index.js search --help
+node dist/index.js search --help
 ```
 
 You should see the following output:
 
 ```
-src/index.js search
+dist/index.js search
 
 Query specific information from the JSON file
 
@@ -59,7 +59,7 @@ This README covers what these options mean. Be sure to check out the [Examples](
 File is required, and is a relative path to the json file you downloaded in the first step.
 
 ```
-node src/index.js search --file=Chuely.json --term="culture"
+node dist/index.js search --file=Chuely.json --term="culture"
 ```
 
 If the app does not find it, you will see an error like `Error reading the JSON file: Error: ENOENT: no such file or directory`
@@ -69,45 +69,111 @@ If the app does not find it, you will see an error like `Error reading the JSON 
 The "path" option is used to retrieve the value of a specific JSON path within the dataset. It allows you to extract information from nested JSON objects. To use the "path" option, run:
 
 ```
-node src/index.js search --path [json_path]
+node dist/index.js search --path [json_path]
 ```
 
 Replace `[json_path]` with the desired JSON path to the object you want to extract. See [Examples](#examples) and [Details](#details) below for more about how to write a _path_.
 
 ```
-node src/index.js search --file=Chuely.json --path info
-node src/index.js search --file=Chuely.json --path settings
-node src/index.js search --file=Chuely.json --path settings.distanceUnit
-node src/index.js search --file=Chuely.json --path settings.options.year
+node dist/index.js search --file=Chuely.json --path info
+node dist/index.js search --file=Chuely.json --path settings
+node dist/index.js search --file=Chuely.json --path settings.distanceUnit
+node dist/index.js search --file=Chuely.json --path settings.options.year
+```
+
 ### --term
 
-The "term" option is used to search for specific terms within the dataset. This can be useful for finding specific locations, biomes, or other information related to your map. To use the "term" option, run:
+The "term" option is used to search for specific terms within the dataset and it returns the *JSON path* where that term is used. To use the "term" option, run:
 
 ```
-node src/index.js search --term [search_term]
+node dist/index.js search --term [search_term]
 ```
 
 Replace `[search_term]` with the term you want to search for. This searches both paths and values for the term. It can be a string or a regex.
 
 ```
-node src/index.js search --file=Chuely.json --term="infantry"
-node src/index.js search --file=Chuely.json --term=Betford
-node src/index.js search --file=Chuely.json --term=/name$/
+node dist/index.js search --file=Chuely.json --term="infantry"
+```
+
+returns the paths where "infantry" occurs:
+
+```
+settings.options.military.0.name: infantry
+```
+
+In this case, it is used only once.  You can then take a look at that path by using:
+```bash
+node dist/index.js search --file=Chuely.json --path="settings.options.military.0"
+```
+
+which returns:
+```JSON
+{
+  icon: '⚔️',
+  name: 'infantry',
+  rural: 0.25,
+  urban: 0.2,
+  crew: 1,
+  power: 1,
+  type: 'melee',
+  separate: 0
+}
+```
+
+To use a regular expression, insert it between two slashes. This example returns any path where "name" is at the end: effectively, all names in the world.
+
+```bash
+node dist/index.js search --file=Chuely.json --term=/name$/
+```
+```
+settings.options.military.0.name: infantry
+settings.options.military.1.name: archers
+settings.options.military.2.name: cavalry
+settings.options.military.3.name: artillery
+settings.options.military.4.name: fleet
+pack.features.5.name: Berzogollo
+pack.features.6.name: Moyoma
+pack.features.7.name: Opolissos
+pack.features.8.name: Okobalyurt
+pack.features.12.name: Chandmadar
+pack.features.13.name: Chirwon
+pack.features.16.name: Metharmah
+pack.features.17.name: Villeres
+pack.features.18.name: Bobelelesely
+pack.features.20.name: Hajfagyecsany
+...
 ```
 
 ### --properties
 
 The `--properties` option is used to filter the JSON output by specifying the properties you want to display. You can provide a comma-separated list of property names, and the output will only include those properties. For example, to see only the `name` and `population` properties of the `burgs`:
 
+```bash
+node dist/index.js search --file Chuely.json --path pack.burgs --properties name,population
 ```
-node src/index.js search --file Chuely.json --path pack.burgs --properties name,population
+
+```JSON
+[
+  {},
+  { name: 'Gaury', population: 13.802 },
+  { name: 'Exandna', population: 35.054 },
+  { name: 'Juktos', population: 66.189 },
+  { name: 'Gang', population: 55.573 },
+  { name: 'Zaoliasto', population: 69.184 },
+  { name: 'Erdieauvil', population: 12.952 },
+  { name: 'Huecanar', population: 19.395 },
+  { name: 'Valmera', population: 5.419 },
+  { name: 'Cleauchare', population: 19.402 },
+  { name: 'Bay', population: 4.724 },
+  ...
+]
 ```
 
 Other uses of `--properties`
 
-```
-node src/index.js search --file Chuely.json --path pack.rivers --properties name,type
-node src/index.js search --file Chuely.json --path pack.features --properties type,group
+```bash
+node dist/index.js search --file Chuely.json --path pack.rivers --properties name,type
+node dist/index.js search --file Chuely.json --path pack.features --properties type,group
 ```
 
 ### --sql
@@ -115,21 +181,35 @@ node src/index.js search --file Chuely.json --path pack.features --properties ty
 The "sql" option allows you to execute SQL queries on the dataset. This can be useful for extracting information or analyzing the data in various ways. Note that if this option is defined, all options (other than `--file`) are ignored. To use the "sql" option, run:
 
 ```
-node src/index.js search --sql [sql_query]
+node dist/index.js search --sql [sql_query]
 ```
 
 Replace `[sql_query]` with a valid SQL query for the dataset. Generally that should be a `SELECT` query.
 
 ```
-node src/index.js search --file=Chuely.json --sql="SELECT * FROM cells WHERE road=1"
+node dist/index.js search --file=Chuely.json --sql="SELECT i,state,p FROM cells WHERE road=1"
 ```
 
-This will return all of the cells on the map that contain road with id 1
+This will return all of the cells on the map that contain road with id 1:
+```JSON
+[
+  { i: 6, state: 0, p: [ 1414.74, 214.02 ] },
+  { i: 7, state: 0, p: [ 1406, 220.7 ] }, 
+
+  ...
+
+  { i: 5007, state: 0, p: [ 613.5, 1133.3 ] },
+  { i: 5039, state: 0, p: [ 596.62, 1141.69 ] },
+  { i: 5040, state: 0, p: [ 607.28, 1141.81 ] }
+]
+```
+Apparently road 1 is quite long.
+
 
 You can list all of the tables available to query by using:
 
 ```
-node src/index.js search --file=Chuely.json --sql="SELECT VALUE listTables()"
+node dist/index.js search --file=Chuely.json --sql="SELECT VALUE listTables()"
 ```
 
 and that should return:
@@ -148,51 +228,225 @@ and that should return:
 This shows you all of the groupings that you can search:
 
 ```
-node src/index.js search --file=Chuely.json --sql="SELECT * FROM cultures"
-node src/index.js search --file=Chuely.json --sql="SELECT * FROM cultures WHERE expansionism>2"
-node src/index.js search --file=Chuely.json --sql="SELECT UNIQUE type FROM cultures"
-node src/index.js search --file=Chuely.json --sql="SELECT * FROM cultures WHERE type='Nomadic'"
-node src/index.js search --file=Chuely.json --sql="SELECT * FROM religions"
+node dist/index.js search --file=Chuely.json --sql="SELECT * FROM cultures"
+node dist/index.js search --file=Chuely.json --sql="SELECT * FROM cultures WHERE expansionism>2"
+node dist/index.js search --file=Chuely.json --sql="SELECT UNIQUE type FROM cultures"
+node dist/index.js search --file=Chuely.json --sql="SELECT * FROM cultures WHERE type='Nomadic'"
+node dist/index.js search --file=Chuely.json --sql="SELECT * FROM religions"
 ```
 
 You can also perform joins on different tables:
 
 ```bash
-node src/index.js search --file=Chuely.json --sql="SELECT religions.name, religions.type, religions.form, cultures.name AS culture FROM religions LEFT JOIN cultures ON religions.culture = cultures.i"
+node dist/index.js search --file=Chuely.json --sql="SELECT religions.name, religions.type, religions.form, cultures.name AS culture FROM religions LEFT JOIN cultures ON religions.culture = cultures.i"
+```
+
+which returns something like this:
+```JSON
+[
+  {
+    name: 'No religion',
+    type: undefined,
+    form: undefined,
+    culture: undefined
+  },
+  {
+    name: 'Luari Beliefs',
+    type: 'Folk',
+    form: 'Nature Worship',
+    culture: 'Luari'
+  },
+  {
+    name: 'Slovan Beliefs',
+    type: 'Folk',
+    form: 'Nature Worship',
+    culture: 'Slovan'
+  },
+  {
+    name: 'Angshire Beliefs',
+    type: 'Folk',
+    form: 'Shamanism',
+    culture: 'Angshire'
+  },
+  {
+    name: 'Soumi Spirits',
+    type: 'Folk',
+    form: 'Animism',
+    culture: 'Soumi'
+  },
+  {
+    name: 'Norse Beliefs',
+    type: 'Folk',
+    form: 'Shamanism',
+    culture: 'Norse'
+  },
+  {
+    name: 'Shwazen Beliefs',
+    type: 'Folk',
+    form: 'Shamanism',
+    culture: 'Shwazen'
+  },
+  {
+    name: 'Old Vengrian Shamanism',
+    type: 'Folk',
+    form: 'Shamanism',
+    culture: 'Vengrian'
+  },
+  {
+    name: 'Romian Spirits',
+    type: 'Folk',
+    form: 'Animism',
+    culture: 'Romian'
+  },
+  {
+    name: 'Tallian Beliefs',
+    type: 'Folk',
+    form: 'Nature Worship',
+    culture: 'Tallian'
+  },
+  {
+    name: 'Ulus Beliefs',
+    type: 'Folk',
+    form: 'Nature Worship',
+    culture: 'Ulus'
+  },
+  {
+    name: 'Elladan Shamanism',
+    type: 'Folk',
+    form: 'Shamanism',
+    culture: 'Elladan'
+  },
+  {
+    name: 'Old Astellian Beliefs',
+    type: 'Folk',
+    form: 'Animism',
+    culture: 'Astellian'
+  },
+  {
+    name: 'Portuzian Beliefs',
+    type: 'Folk',
+    form: 'Ancestor Worship',
+    culture: 'Portuzian'
+  },
+  {
+    name: 'Hebrew Spirits',
+    type: 'Folk',
+    form: 'Animism',
+    culture: 'Hebrew'
+  },
+  {
+    name: 'Eurabic Druids',
+    type: 'Folk',
+    form: 'Nature Worship',
+    culture: 'Eurabic'
+  },
+  {
+    name: 'Koryo Spirits',
+    type: 'Folk',
+    form: 'Animism',
+    culture: 'Koryo'
+  },
+  {
+    name: 'Turchian Spirits',
+    type: 'Folk',
+    form: 'Animism',
+    culture: 'Turchian'
+  },
+  {
+    name: 'Zaoliast Church',
+    type: 'Organized',
+    form: 'Monotheism',
+    culture: 'Astellian'
+  },
+  {
+    name: 'Juktian Faith',
+    type: 'Organized',
+    form: 'Monotheism',
+    culture: 'Elladan'
+  },
+  {
+    name: 'Word of Goasungyeon',
+    type: 'Organized',
+    form: 'Pantheism',
+    culture: 'Koryo'
+  },
+  {
+    name: 'Path of Auly',
+    type: 'Organized',
+    form: 'Dualism',
+    culture: 'Luari'
+  },
+  {
+    name: 'Vengrian Gods',
+    type: 'Organized',
+    form: 'Polytheism',
+    culture: 'Vengrian'
+  },
+  {
+    name: 'Path of Pyrtene',
+    type: 'Organized',
+    form: 'Monotheism',
+    culture: 'Elladan'
+  },
+  {
+    name: 'Alalaretism',
+    type: 'Organized',
+    form: 'Dualism',
+    culture: 'Astellian'
+  },
+  {
+    name: 'Astellianism',
+    type: 'Organized',
+    form: 'Monotheism',
+    culture: 'Astellian'
+  },
+  {
+    name: 'Occultism of the Hungry Divine One',
+    type: 'Cult',
+    form: 'Dark Cult',
+    culture: 'Astellian'
+  },
+  {
+    name: 'Atforish Heresy',
+    type: 'Heresy',
+    form: 'Heresy',
+    culture: 'Angshire'
+  }
+]
 ```
 
 You can also use paths in your SQL query by using the special `pathValue` function:
 
 ```
-node src/index.js search --file=Chuely.json --sql="SELECT VALUE pathValue('settings.mapName')"
-
-// 'Chuely'
+node dist/index.js search --file=Chuely.json --sql="SELECT VALUE pathValue('settings.mapName')"
 ```
+
+which just returns the name of the map: `Chuely`
 
 ### Search Examples
 
 Search for a specific term:
 
 ```
-node src/index.js search --file=Chuely.json --term /character/
+node dist/index.js search --file=Chuely.json --term /character/
 ```
 
 Execute an SQL query:
 
 ```
-node src/index.js search --file=Chuely.json --sql "SELECT * FROM notes"
+node dist/index.js search --file=Chuely.json --sql "SELECT * FROM notes"
 ```
 
 List the populations of all the burgs ordered by population starting with the largest:
 
 ```
-node src/index.js search --file=Chuely.json --sql="SELECT name, CAST(population * 1000 AS INTEGER) AS population FROM burgs ORDER by population DESC"
+node dist/index.js search --file=Chuely.json --sql="SELECT name, CAST(population * 1000 AS INTEGER) AS population FROM burgs ORDER by population DESC"
 ```
 
 List the states, their capitals and cultures:
 
 ```
-node src/index.js search --file=Chuely.json --sql="SELECT states.fullName AS state, burgs.name AS capital, cultures.name AS culture FROM states JOIN burgs ON states.capital = burgs.i  JOIN cultures ON states.culture = cultures.i"
+node dist/index.js search --file=Chuely.json --sql="SELECT states.fullName AS state, burgs.name AS capital, cultures.name AS culture FROM states JOIN burgs ON states.capital = burgs.i  JOIN cultures ON states.culture = cultures.i"
 ```
 ```JSON
 [
@@ -217,19 +471,19 @@ node src/index.js search --file=Chuely.json --sql="SELECT states.fullName AS sta
 List the burgs and their biomes:
 
 ```
-node src/index.js search --file=Chuely.json --sql="SELECT burgs.name AS burg_name, biomes.name AS biome FROM burgs JOIN cells ON burgs.cell = cells.i JOIN biomes ON cells.biome = biomes.i"
+node dist/index.js search --file=Chuely.json --sql="SELECT burgs.name AS burg_name, biomes.name AS biome FROM burgs JOIN cells ON burgs.cell = cells.i JOIN biomes ON cells.biome = biomes.i"
 ```
 
 Retrieve the value of a specific JSON path:
 
 ```
-node src/index.js search --file Chuely.json --path "pack.cells.733.biome"
+node dist/index.js search --file Chuely.json --path "pack.cells.733.biome"
 ```
 
 List the populations of all the burgs - using `settings.populationRate` as the mutliplier:
 
 ```
-node src/index.js search --file=Chuely.json --sql="SELECT name, CAST(population * pathValue('settings.populationRate') AS INTEGER) AS population FROM burgs ORDER BY population DESC"
+node dist/index.js search --file=Chuely.json --sql="SELECT name, CAST(population * pathValue('settings.populationRate') AS INTEGER) AS population FROM burgs ORDER BY population DESC"
 ```
 
 ### Details
@@ -243,7 +497,7 @@ The top-level terms are: info, settings, pack, grid, biomesData, notes, nameBase
 In order to see all of the religions, for instance, you could do:
 
 ```
-node src/index.js search --file=Chuely.json --path=pack.religions
+node dist/index.js search --file=Chuely.json --path=pack.religions
 ```
 
 which might return
@@ -272,7 +526,7 @@ which might return
 If you want to look at just one element of an array, you can add its index number on the end like this:
 
 ```
-node src/index.js search --file=Chuely.json --path=pack.states.5
+node dist/index.js search --file=Chuely.json --path=pack.states.5
 ```
 
 which would return your map's version of state #5
@@ -290,16 +544,16 @@ which would return your map's version of state #5
 ...
 ```
 
-The top-level property `pack` is massive. I don't recommend doing:
+The top-level property `pack` is massive. This will spam you with unvariegated JSON objects:
 
 ```
-node src/index.js search --file=Chuely.json --path="pack"
+node dist/index.js search --file=Chuely.json --path="pack"
 ```
 
 Instead, use it with one of its subpaths: features, cultures, burgs, states, provinces, religions, rivers, markers
 
 ```
-node src/index.js search --file=Chuely.json --path="pack.rivers"
+node dist/index.js search --file=Chuely.json --path="pack.rivers"
 ```
 
 #### sql
@@ -315,7 +569,7 @@ There are two custom functions you can use in your SQL query:
 This function is used to list all the tables that are currently available in the database.
 
 ```
-$ node src/index.js search --file=Chuely.json --sql="SELECT VALUE listTables()"
+$ node dist/index.js search --file=Chuely.json --sql="SELECT VALUE listTables()"
 
 [
   'cells',     'features',
@@ -334,7 +588,7 @@ You can use this to help construct your queries: `SELECT * FROM provinces` for e
 This function takes a JSON path as a string and returns the value at that path in the JSON object. See [path](#path) to see how to constuct a `path`
 
 ```
-node src/index.js search --file=Chuely.json --sql="SELECT VALUE pathValue('settings.mapName')"
+node dist/index.js search --file=Chuely.json --sql="SELECT VALUE pathValue('settings.mapName')"
 ```
 
 Replace `settings.mapName` with the desired JSON path, using dots to separate the levels. This will return the value found at the specified JSON path.
@@ -346,18 +600,18 @@ Replace `settings.mapName` with the desired JSON path, using dots to separate th
 Using `--term` returns the value and the path to that value. e.g.
 
 ```
-$ node src/index.js search --file=Chuely.json --term=/military/
+ node dist/index.js search --file=Chuely.json --term=/military/
 
 ...
 settings.options.military.4.crew: 100
 settings.options.military.4.power: 50
 settings.options.military.4.type: naval
 settings.options.military.4.separate: 1
-cells.states.1.military.0.i: 0
-cells.states.1.military.0.a: 12368
+pack.states.1.military.0.i: 0
+pack.states.1.military.0.a: 12368
 ...
 
-$ node src/index.js search --file=Chuely.json --path settings.options.military.4.power
+$ node dist/index.js search --file=Chuely.json --path settings.options.military.4.power
 
 50
 ```
@@ -366,7 +620,7 @@ $ node src/index.js search --file=Chuely.json --path settings.options.military.4
 
 Pathfinding. Use the `route` command to find the shortest route a traveller can take from one location to another.
 
-`node src/index.js route --help` gives these instructions
+`node dist/index.js route --help` gives these instructions
 
 ```
 index.js route
@@ -386,7 +640,7 @@ If you want to follow along the examples, Nidyia has seed `126920625` and Chuely
 
 Type the `--locations` separated by commas.
 
-`node src/index.js route --locations="Skalt'hanek,Nanarras,Sargush,Rralerjass" --file=RAW/Nidyia.json`
+`node dist/index.js route --locations="Skalt'hanek,Nanarras,Sargush,Rralerjass" --file=RAW/Nidyia.json`
 
 The first location is the start and the others are visited in turn:
 
@@ -401,11 +655,11 @@ Cell i: 37, distance: 253.2 mi, burg: Rralerjass, biome: Temperate rainforest, p
 
 You can type the name in lowercase and without spaces or other marks, if that's easier:
 
-`node src/index.js route --locations="skalthanek,nanarras,sargush,rralerjass" --file=RAW/Nidyia.json`
+`node dist/index.js route --locations="skalthanek,nanarras,sargush,rralerjass" --file=RAW/Nidyia.json`
 
 You can also use the cell ids for unnamed locations without a burg, like so:
 
-`node src/index.js route --file Nidyia.json --locations 3679,4186`
+`node dist/index.js route --file Nidyia.json --locations 3679,4186`
 
 To find the correct cell id, open the _Cell Details_ window on the website,
 hover your cursor over the part of the map for which you want the cell id and
@@ -433,7 +687,7 @@ Follow these steps to get the application up and running on your local machine:
 5. After the dependencies are installed, make sure it works using the following command:
 
 ```
-   node index.js search
+   node dist/index.js search
 ```
 
 If you see something like `Query specifc information in the JSON file` you are good to go.
